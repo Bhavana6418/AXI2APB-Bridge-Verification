@@ -1,0 +1,41 @@
+class apb_sequence extends uvm_sequence #(uvm_sequence_item); //#(axi_xtn);
+	`uvm_object_utils(apb_sequence)
+
+bit [3:0] arlen;
+bit [3:0] awlen;
+
+function new(string name = "apb_sequence");
+	super.new(name);
+endfunction
+
+endclass
+
+
+class apb_seq1 extends apb_sequence;
+	`uvm_object_utils(apb_seq1)
+	apb_xtn req;
+
+function new(string name = "apb_seq1");
+	super.new(name);
+endfunction
+
+task body();
+
+	if(!uvm_config_db#(bit[3:0])::get(null,get_full_name,"awlen",awlen))
+		`uvm_fatal(get_type_name(),"cannot getting awlen from test in apb_seq")
+
+	if(!uvm_config_db#(bit[3:0])::get(null,get_full_name,"arlen",arlen))
+		`uvm_fatal(get_type_name(),"cannot getting arlen from test in apb_seq")
+
+req = apb_xtn::type_id::create("req");
+
+repeat(awlen+arlen+1)
+//repeat(12)
+ begin
+   start_item(req);
+   req.randomize();
+   finish_item(req);
+end
+endtask
+
+endclass

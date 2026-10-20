@@ -1,0 +1,50 @@
+class apb_xtn extends uvm_sequence_item ;
+	`uvm_object_utils(apb_xtn)
+
+		  rand bit presetn;
+		  bit psel;
+		  bit [9:0] Psel;
+		  bit pwrite,penable;
+		  bit [2:0] pprot;
+		  bit [31:0] paddr;
+		  bit [31:0] pwdata;
+		  bit [3:0] pstrb;
+		  rand bit pslverr,pready;
+	          rand bit [31:0] prdata;
+		  bit [1:0] pwresp;
+		  bit [1:0] prresp;
+
+	//queues to store paddr, write and read address
+	static int PADDR_WRITE[$], PADDR_READ[$];
+
+	//queues to store pwdata, pstrobe, write resp and read resp
+	static int PWDATA[$], PSTRB[$], PRRESP[$], PWRESP[$];
+
+	//queues to store prdata, write protection and read protection signals
+	static int PRDATA[$], WPROT[$], RPROT[$];
+
+	function new(string name = "apb_xtn");
+		super.new(name);
+	endfunction
+
+	function void do_print(uvm_printer printer);
+		super.do_print(printer);
+
+		printer.print_field("presetn",this.presetn,1,UVM_HEX);
+		printer.print_field("psel",this.psel,1,UVM_HEX);
+		printer.print_field("Psel",this.Psel,10,UVM_HEX);
+		printer.print_field("penable",this.penable,1,UVM_HEX);
+		printer.print_field("pwrite",this.pwrite,1,UVM_HEX);
+		printer.print_field("pstrb",this.pstrb,4,UVM_HEX);
+		printer.print_field("pprot",this.pprot,3,UVM_HEX);
+		printer.print_field("pready",this.pready,1,UVM_HEX);
+		printer.print_field("pslverr",this.pslverr,1,UVM_HEX);
+		printer.print_field("paddr",this.paddr,32,UVM_HEX);
+		printer.print_field("pwdata",this.pwdata,32,UVM_HEX);
+		printer.print_field("prdata",this.prdata,32,UVM_HEX);
+		printer.print_field("pwresp",this.pwresp,2,UVM_HEX);
+		printer.print_field("prresp",this.prresp,2,UVM_HEX);
+
+	endfunction
+
+endclass

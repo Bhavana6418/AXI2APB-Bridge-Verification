@@ -1,0 +1,249 @@
+class axi_sequence extends uvm_sequence #(axi_xtn);
+	`uvm_object_utils(axi_sequence)
+
+	bit[3:0] awlen=3;
+	bit[3:0] arlen=3;
+
+function new(string name = "axi_sequence");
+	super.new(name);
+endfunction
+
+task body();
+	if(!uvm_config_db#(bit[3:0])::get(null,get_full_name,"awlen",awlen))
+		`uvm_fatal(get_type_name(),"cannot getting awlen from test")
+
+	if(!uvm_config_db#(bit[3:0])::get(null,get_full_name,"arlen",arlen))
+		`uvm_fatal(get_type_name(),"cannot getting arlen from test")
+endtask
+
+endclass
+
+//axi_random sequence0
+class axi_random_sequence extends axi_sequence;
+	`uvm_object_utils(axi_random_sequence)
+
+function new(string name = "axi_random_sequence");
+	super.new(name);
+endfunction
+
+task body();
+	super.body();
+	repeat(1)
+		begin
+			req=axi_xtn::type_id::create("req");
+			
+			start_item(req);
+			assert(req.randomize() with {Aresetn==1;Arlen==arlen;Awlen==awlen;Arvalid==1;});
+			finish_item(req);
+		end
+
+endtask
+
+endclass
+
+//axi_decode_err sequence
+class axi_decode_error_sequence extends axi_sequence;
+	`uvm_object_utils(axi_decode_error_sequence)
+
+function new(string name = "axi_decode_error_sequence");
+	super.new(name);
+endfunction
+
+task body();
+	super.body();
+	repeat(1)
+		begin
+			req=axi_xtn::type_id::create("req");
+			
+			start_item(req);
+			assert(req.randomize() with {Aresetn==1;Arlen==arlen;Awlen==awlen;Awaddr==32'h 5000_0000; Araddr==32'h 6000_0000;});
+			finish_item(req);
+		end
+
+endtask
+
+endclass
+
+//axi_config sequence for 1rd 1wr 000
+class axi_csr_sequence_000 extends axi_sequence;
+	`uvm_object_utils(axi_csr_sequence_000)
+
+function new(string name = "axi_csr_sequence_000");
+	super.new(name);
+endfunction
+
+task body();
+	super.body();
+	repeat(1)
+		begin
+			req=axi_xtn::type_id::create("req");
+			
+			start_item(req);
+			assert(req.randomize() with {Aresetn==1;Awaddr==32'h 4000_A000;Awlen==0;Wdata_csr==32'h 8000_0000; Arlen==arlen; Arvalid==0;});
+			finish_item(req);
+		end
+
+endtask
+
+endclass
+
+//axi_config sequence for 1rd 1wr 001
+class axi_csr_sequence_001 extends axi_sequence;
+	`uvm_object_utils(axi_csr_sequence_001)
+
+function new(string name = "axi_csr_sequence_001");
+	super.new(name);
+endfunction
+
+task body();
+	super.body();
+	repeat(1)
+		begin
+			req=axi_xtn::type_id::create("req");
+			
+			start_item(req);
+			assert(req.randomize() with {Aresetn==1;Awaddr==32'h 4000_A000;Awlen==0;Wdata_csr==32'h 8000_0001; Arlen==arlen; Arvalid==0;});
+			finish_item(req);
+		end
+
+endtask
+
+endclass
+
+//axi_config sequence for 2rd 1wr 010
+class axi_csr_sequence_010 extends axi_sequence;
+	`uvm_object_utils(axi_csr_sequence_010)
+
+function new(string name = "axi_csr_sequence_010");
+	super.new(name);
+endfunction
+
+task body();
+	super.body();
+	repeat(1)
+		begin
+			req=axi_xtn::type_id::create("req");
+			
+			start_item(req);
+			assert(req.randomize() with {Aresetn==1;Awaddr==32'h 4000_A000;Awlen==0;Wdata_csr==32'h 8000_0002; Arlen==arlen; Arvalid==0;});
+			finish_item(req);
+		end
+
+endtask
+
+endclass
+
+//axi_config sequence for 3rd 1wr 0
+class axi_csr_sequence_011 extends axi_sequence;
+	`uvm_object_utils(axi_csr_sequence_011)
+
+function new(string name = "axi_csr_sequence_011");
+	super.new(name);
+endfunction
+
+task body();
+	super.body();
+	repeat(1)
+		begin
+			req=axi_xtn::type_id::create("req");
+			
+			start_item(req);
+			assert(req.randomize() with {Aresetn==1;Awaddr==32'h 4000_A000;Awlen==0;Wdata_csr==32'h 8000_0003; Arlen==arlen; Arvalid==0;});
+			finish_item(req);
+		end
+
+endtask
+
+endclass
+
+//axi_config sequence for 1wr 1rd 100
+class axi_csr_sequence_100 extends axi_sequence;
+	`uvm_object_utils(axi_csr_sequence_100)
+
+function new(string name = "axi_csr_sequence_100");
+	super.new(name);
+endfunction
+
+task body();
+	super.body();
+	repeat(1)
+		begin
+			req=axi_xtn::type_id::create("req");
+			
+			start_item(req);
+			assert(req.randomize() with {Aresetn==1;Awaddr==32'h 4000_A000;Awlen==0;Wdata_csr==32'h 8000_0004; Arlen==arlen; Arvalid==0;});
+			finish_item(req);
+		end
+
+endtask
+
+endclass
+
+//axi_config sequence for 1wr 1rd 101
+class axi_csr_sequence_101 extends axi_sequence;
+	`uvm_object_utils(axi_csr_sequence_101)
+
+function new(string name = "axi_csr_sequence_101");
+	super.new(name);
+endfunction
+
+task body();
+	super.body();
+	repeat(1)
+		begin
+			req=axi_xtn::type_id::create("req");
+			
+			start_item(req);
+			assert(req.randomize() with {Aresetn==1;Awaddr==32'h 4000_A000;Awlen==0;Wdata_csr==32'h 8000_0005; Arlen==arlen; Arvalid==0;});
+			finish_item(req);
+		end
+
+endtask
+
+endclass
+
+//axi_config sequence for 2wr 1rd 110
+class axi_csr_sequence_110 extends axi_sequence;
+	`uvm_object_utils(axi_csr_sequence_110)
+
+function new(string name = "axi_csr_sequence_110");
+	super.new(name);
+endfunction
+
+task body();
+	super.body();
+	repeat(1)
+		begin
+			req=axi_xtn::type_id::create("req");
+			
+			start_item(req);
+			assert(req.randomize() with {Aresetn==1;Awaddr==32'h 4000_A000;Awlen==0;Wdata_csr==32'h 8000_0006; Arlen==arlen; Arvalid==0;});
+			finish_item(req);
+		end
+
+endtask
+
+endclass
+
+//axi_config sequence for 3wr 1rd 000
+class axi_csr_sequence_111 extends axi_sequence;
+	`uvm_object_utils(axi_csr_sequence_111)
+
+function new(string name = "axi_csr_sequence_111");
+	super.new(name);
+endfunction
+
+task body();
+	super.body();
+	repeat(1)
+		begin
+			req=axi_xtn::type_id::create("req");
+			
+			start_item(req);
+			assert(req.randomize() with {Aresetn==1;Awaddr==32'h 4000_A000;Awlen==0;Wdata_csr==32'h 8000_0007; Arlen==arlen; Arvalid==0;});
+			finish_item(req);
+		end
+
+endtask
+
+endclass

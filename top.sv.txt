@@ -1,0 +1,194 @@
+`timescale 1ns/1ps
+module top();
+
+	import uvm_pkg::*;
+	import axi2apb_pkg::*;
+
+	bit aclk;
+	bit pclk;
+
+	always #5 aclk = ~aclk;
+	always #10 pclk = ~pclk;
+
+	axi_interface axi_if(aclk);
+
+	apb_interface apb_if0(pclk);
+	apb_interface apb_if1(pclk);
+	apb_interface apb_if2(pclk);
+	apb_interface apb_if3(pclk);
+	apb_interface apb_if4(pclk);
+	apb_interface apb_if5(pclk);
+	apb_interface apb_if6(pclk);
+	apb_interface apb_if7(pclk);
+	apb_interface apb_if8(pclk);
+	apb_interface apb_if9(pclk); 
+
+	apb_master_interface apb_mif(pclk);  
+
+	axi_2_apb_top#(.AW(32),.DW(32),.IW(4),.LW(4),.SLAVE0_BASE_ADDR(32'h4000_0000),.SLAVE1_BASE_ADDR(32'h4000_1000),.SLAVE2_BASE_ADDR(32'h4000_2000),.SLAVE3_BASE_ADDR(32'h4000_3000),. SLAVE4_BASE_ADDR(32'h4000_4000),.SLAVE5_BASE_ADDR(32'h4000_5000),.SLAVE6_BASE_ADDR(32'h4000_6000),.SLAVE7_BASE_ADDR(32'h4000_7000),.SLAVE8_BASE_ADDR(32'h4000_8000),.SLAVE9_BASE_ADDR(32'h4000_9000),.SLAVE10_BASE_ADDR(32'h4000_A000),.OFFSET_ADDR(32'h0000_0FFF)) 
+
+		DUT    (.Aclk_i(aclk),
+			.Aresetn_i(axi_if.Aresetn),
+		 
+		        .Awid_i(axi_if.Awid),
+		        .Awaddr_i(axi_if.Awaddr),
+		        .Awlen_i(axi_if.Awlen),
+		        .Awsize_i(axi_if.Awsize),
+		        .Awburst_i(axi_if.Awburst),
+		        .Awprot_i(axi_if.Awprot),
+		        .Awvalid_i(axi_if.Awprot),
+		        .Awready_o(axi_if.Awready),
+
+		        .Wdata_i(axi_if.Wdata),
+	 	        .Wstrb_i(axi_if.Wstrb),
+		        .Wlast_i(axi_if.Wlast),
+			.Wvalid_i(axi_if.Wvalid),
+		        .Wready_o(axi_if.Wready),
+
+		        .Bid_o(axi_if.Bid),
+	 	        .Bresp_o(axi_if.Bresp),
+		        .Bvalid_o(axi_if.Bvalid),
+		        .Bready_i(axi_if.Bready),
+
+		  	.Arid_i(axi_if.Arid),
+			.Araddr_i(axi_if.Araddr),
+		 	.Arlen_i(axi_if.Arlen),
+		 	.Arsize_i(axi_if.Arsize),
+	 	 	.Arburst_i(axi_if.Arburst),
+		 	.Arprot_i(axi_if.Arprot),
+		 	.Arvalid_i(axi_if.Arvalid),
+		 	.Arready_o(axi_if.Arready),
+
+		 	.Rid_o(axi_if.Rid),
+		 	.Rdata_o(axi_if.Rdata),
+		 	.rresp_o(axi_if.rresp),
+		 	.Rready_i(axi_if.Rready),
+		 	.Rlast_o(axi_if.Rlast),
+		 	.Rvalid_o(axi_if.Rvalid),
+
+			.Pclk_i(pclk),
+			.Presetn_i(apb_if0.presetn),
+			.Pselx_o(apb_mif.Psel),
+			.pwrite_o(apb_if0.pwrite),
+			.penable_o(apb_if0.penable),
+			.pprot_o(apb_if0.pprot),
+			.paddr_o(apb_if0.paddr),
+			.pwdata_o(apb_if0.pwdata),
+			.pstrb_o(apb_if0.pstrb),
+			.pslverr_i({apb_if0.pslverr,apb_if1.pslverr,apb_if2.pslverr,apb_if3.pslverr,apb_if4.pslverr,apb_if5.pslverr,apb_if6.pslverr,apb_if7.pslverr,apb_if8.pslverr,apb_if9.pslverr}),
+			.pready_i({apb_if0.pready,apb_if1.pready,apb_if2.pready,apb_if3.pready,apb_if4.pready,apb_if5.pready,apb_if6.pready,apb_if7.pready,apb_if8.pready,apb_if9.pready}),
+			.prdata_i_0(apb_if0.prdata),
+			.prdata_i_1(apb_if1.prdata),
+			.prdata_i_2(apb_if2.prdata),
+			.prdata_i_3(apb_if3.prdata),
+			.prdata_i_4(apb_if4.prdata),
+			.prdata_i_5(apb_if5.prdata),
+			.prdata_i_6(apb_if6.prdata),
+			.prdata_i_7(apb_if7.prdata),
+			.prdata_i_8(apb_if8.prdata),
+			.prdata_i_9(apb_if9.prdata));
+
+	assign apb_if1.presetn = apb_if0.presetn;
+	assign apb_if2.presetn = apb_if0.presetn;
+	assign apb_if3.presetn = apb_if0.presetn;
+	assign apb_if4.presetn = apb_if0.presetn;
+	assign apb_if5.presetn = apb_if0.presetn;
+	assign apb_if6.presetn = apb_if0.presetn;
+	assign apb_if7.presetn = apb_if0.presetn;
+	assign apb_if8.presetn = apb_if0.presetn;
+	assign apb_if9.presetn = apb_if0.presetn;
+
+	assign apb_if1.pwrite = apb_if0.pwrite;
+	assign apb_if2.pwrite = apb_if0.pwrite;
+	assign apb_if3.pwrite = apb_if0.pwrite;
+	assign apb_if4.pwrite = apb_if0.pwrite;
+	assign apb_if5.pwrite = apb_if0.pwrite;
+	assign apb_if6.pwrite = apb_if0.pwrite;
+	assign apb_if7.pwrite = apb_if0.pwrite;
+	assign apb_if8.pwrite = apb_if0.pwrite;
+	assign apb_if9.pwrite = apb_if0.pwrite;
+
+	assign apb_if1.penable = apb_if0.penable;
+	assign apb_if2.penable = apb_if0.penable;
+	assign apb_if3.penable = apb_if0.penable;
+	assign apb_if4.penable = apb_if0.penable;
+	assign apb_if5.penable = apb_if0.penable;
+	assign apb_if6.penable = apb_if0.penable;
+	assign apb_if7.penable = apb_if0.penable;
+	assign apb_if8.penable = apb_if0.penable;
+	assign apb_if9.penable = apb_if0.penable;
+
+	assign apb_if1.paddr = apb_if0.paddr;
+	assign apb_if2.paddr = apb_if0.paddr;
+	assign apb_if3.paddr = apb_if0.paddr;
+	assign apb_if4.paddr = apb_if0.paddr;
+	assign apb_if5.paddr = apb_if0.paddr;
+	assign apb_if6.paddr = apb_if0.paddr;
+	assign apb_if7.paddr = apb_if0.paddr;
+	assign apb_if8.paddr = apb_if0.paddr;
+	assign apb_if9.paddr = apb_if0.paddr;
+
+	assign apb_if1.pwdata= apb_if0.pwdata;
+	assign apb_if2.pwdata= apb_if0.pwdata;
+	assign apb_if3.pwdata= apb_if0.pwdata;
+	assign apb_if4.pwdata= apb_if0.pwdata;
+	assign apb_if5.pwdata= apb_if0.pwdata;
+	assign apb_if6.pwdata= apb_if0.pwdata;
+	assign apb_if7.pwdata= apb_if0.pwdata;
+	assign apb_if8.pwdata= apb_if0.pwdata;
+	assign apb_if9.pwdata= apb_if0.pwdata;
+
+	assign apb_if1.pstrb = apb_if0.penable;
+	assign apb_if2.pstrb = apb_if0.penable;
+	assign apb_if3.pstrb = apb_if0.penable;
+	assign apb_if4.pstrb = apb_if0.penable;
+	assign apb_if5.pstrb = apb_if0.penable;
+	assign apb_if6.pstrb = apb_if0.penable;
+	assign apb_if7.pstrb = apb_if0.penable;
+	assign apb_if8.pstrb = apb_if0.penable;
+	assign apb_if9.pstrb = apb_if0.penable;
+
+	assign apb_if1.pprot = apb_if0.pprot;
+	assign apb_if2.pprot = apb_if0.pprot;
+	assign apb_if3.pprot = apb_if0.pprot;
+	assign apb_if4.pprot = apb_if0.pprot;
+	assign apb_if5.pprot = apb_if0.pprot;
+	assign apb_if6.pprot = apb_if0.pprot;
+	assign apb_if7.pprot = apb_if0.pprot;
+	assign apb_if8.pprot = apb_if0.pprot;
+	assign apb_if9.pprot = apb_if0.pprot;
+
+	assign apb_if0.psel = apb_mif.Psel[0];
+	assign apb_if1.psel = apb_mif.Psel[1];
+	assign apb_if2.psel = apb_mif.Psel[2];
+	assign apb_if3.psel = apb_mif.Psel[3];
+	assign apb_if4.psel = apb_mif.Psel[4];
+	assign apb_if5.psel = apb_mif.Psel[5];
+	assign apb_if6.psel = apb_mif.Psel[6];
+	assign apb_if7.psel = apb_mif.Psel[7];
+	assign apb_if8.psel = apb_mif.Psel[8];
+	assign apb_if9.psel = apb_mif.Psel[9];
+
+	initial
+		begin
+			`ifdef VCS
+			$fsdbDumpvars(0,top);
+			`endif
+
+			uvm_config_db#(virtual axi_interface)::set(null,"*","axi_if0",axi_if);
+			uvm_config_db#(virtual apb_interface)::set(null,"*","apb_if0",apb_if0);
+			uvm_config_db#(virtual apb_interface)::set(null,"*","apb_if1",apb_if1);
+			uvm_config_db#(virtual apb_interface)::set(null,"*","apb_if2",apb_if2);
+			uvm_config_db#(virtual apb_interface)::set(null,"*","apb_if3",apb_if3);
+			uvm_config_db#(virtual apb_interface)::set(null,"*","apb_if4",apb_if4);
+			uvm_config_db#(virtual apb_interface)::set(null,"*","apb_if5",apb_if5);
+			uvm_config_db#(virtual apb_interface)::set(null,"*","apb_if6",apb_if6);
+			uvm_config_db#(virtual apb_interface)::set(null,"*","apb_if7",apb_if7);
+			uvm_config_db#(virtual apb_interface)::set(null,"*","apb_if8",apb_if8);
+			uvm_config_db#(virtual apb_interface)::set(null,"*","apb_if9",apb_if9);  
+
+			uvm_config_db#(virtual apb_master_interface)::set(null,"*","apb_mif",apb_mif); 
+			run_test();
+		
+		end
+endmodule

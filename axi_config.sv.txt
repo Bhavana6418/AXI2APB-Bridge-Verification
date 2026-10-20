@@ -1,0 +1,11 @@
+class axi_config extends uvm_object;
+ `uvm_object_utils(axi_config);
+  virtual axi_interface axi_vif;
+  uvm_active_passive_enum is_active=UVM_ACTIVE;
+
+ //constructor new method
+ function new(string name = "axi_config");
+  super.new(name);
+ endfunction
+
+endclass

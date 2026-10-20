@@ -1,0 +1,40 @@
+`timescale 1ns/1ps
+interface apb_interface #(parameter AW=32,
+		   	  parameter DW=32,
+		   	  parameter IW=4,
+		   	  parameter LW=4)
+
+		  (input bit pclock);
+
+		  logic presetn;
+		  logic psel;
+		  logic pwrite,penable;
+		  logic [2:0] pprot;
+		  logic [AW-1:0] paddr;
+		  logic [DW-1:0] pwdata;
+		  logic [(DW/8)-1:0] pstrb;
+		  logic pslverr,pready;
+	          logic [DW-1:0] prdata;
+
+clocking apb_drv_cb@(posedge pclock);
+	default input #1 output #0;
+
+	output presetn,pslverr,pready,prdata;
+	
+	input psel,pwrite,penable,pprot,paddr,pwdata,pstrb;
+
+endclocking
+
+clocking apb_mon_cb@(posedge pclock);
+	default input #1 output #0;
+
+	input presetn,pslverr,pready,prdata;
+	
+	input psel,pwrite,penable,pprot,paddr,pwdata,pstrb;
+
+endclocking
+
+modport APB_DRV_MP(clocking apb_drv_cb);
+modport APB_MON_MP(clocking apb_mon_cb);
+
+endinterface

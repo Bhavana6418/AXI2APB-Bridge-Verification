@@ -1,0 +1,221 @@
+class axi_xtn extends uvm_sequence_item ;
+	`uvm_object_utils(axi_xtn)
+
+		 rand bit Aresetn;
+		 
+		//AW channel
+		 rand bit [7:0] Awid;
+		 rand bit [31:0] Awaddr;
+		 rand bit [7:0] Awlen;
+		 rand bit [2:0] Awsize;
+		 rand bit [1:0] Awburst;
+		 rand bit [2:0] Awprot;
+		 rand bit Awvalid;
+		 bit Awready;
+
+		//WD channel
+		 rand bit [31:0] Wdata[];
+		 rand bit [31:0] Wdata_csr; // local variable
+	 	 rand bit [3:0] Wstrb[];
+		 bit Wlast;
+		 rand bit Wvalid;
+		 bit Wready;
+
+		//Write Response channel
+		 rand bit [7:0] Bid;
+	 	 bit [1:0] Bresp;
+		 rand bit Bvalid;
+		 bit Bready;
+
+		//read addr channel
+		 rand bit [7:0] Arid;
+		 rand bit [31:0] Araddr;
+		 rand bit [7:0] Arlen;
+		 rand bit [2:0] Arsize;
+	 	 rand bit [1:0] Arburst;
+		 rand bit [2:0] Arprot;
+		 rand bit Arvalid;
+		 bit Arready;
+
+		//read data channel
+		 rand bit [7:0] Rid;
+		 rand bit [31:0] Rdata[];
+		 bit [1:0] rresp[];
+		 rand bit Rready;
+		 bit Rlast;
+		 bit Rvalid;
+
+		//local variables for address calculation
+		bit [31:0] w_addr[];
+		bit [31:0] r_addr[];
+
+		//queues to store the AWADDR, ARADDR, AND AWPROT    
+		static int AXI_AWADDR[$], AXI_ARADDR[$], AXI_AWPROT[$], AXI_BRESP[$], AXI_AWID[$], AXI_BID[$];
+
+		//queues to store the WDATA, RDATA, ARPROT AND WSTRB
+		static int AXI_WSTRB[$], AXI_WDATA[$], AXI_RDATA[$], AXI_ARPROT[$], AXI_RRESP[$], AXI_ARID[$], AXI_RID[$];
+
+		//constraints for AXI_ADDR(awaddr != araddr;)
+		constraint AWADDR{ soft Awaddr inside{[32'h 4000_0000:32'h 4000_0fff],
+						      [32'h 4000_1000:32'h 4000_1fff],
+						      [32'h 4000_2000:32'h 4000_2fff],
+						      [32'h 4000_3000:32'h 4000_3fff],
+						      [32'h 4000_4000:32'h 4000_4fff],
+						      [32'h 4000_5000:32'h 4000_5fff],
+						      [32'h 4000_6000:32'h 4000_6fff],
+						      [32'h 4000_7000:32'h 4000_7fff],
+						      [32'h 4000_8000:32'h 4000_8fff],
+						      [32'h 4000_9000:32'h 4000_9fff]};}
+
+		constraint AWSIZE{Awsize inside {[0:2]};}
+
+		constraint AWBURST{Awburst inside {[0:1]};}
+
+		constraint ALLIGNED_ADDRESS_FOR_AWBURST{((Awburst==1||Awburst==0) && Awsize==1) -> Awaddr%2==0;
+							((Awburst==1||Awburst==0) && Awsize==2) -> Awaddr%4==0;}
+
+		constraint WDATA{Wdata.size()==Awlen+1;}
+
+		constraint ARADDR{ soft Araddr inside{[32'h 4000_0000:32'h 4000_0fff],
+						      [32'h 4000_1000:32'h 4000_1fff],
+						      [32'h 4000_2000:32'h 4000_2fff],
+						      [32'h 4000_3000:32'h 4000_3fff],
+						      [32'h 4000_4000:32'h 4000_4fff],
+						      [32'h 4000_5000:32'h 4000_5fff],
+						      [32'h 4000_6000:32'h 4000_6fff],
+						      [32'h 4000_7000:32'h 4000_7fff],
+						      [32'h 4000_8000:32'h 4000_8fff],
+						      [32'h 4000_9000:32'h 4000_9fff]};}
+
+		constraint ARSIZE{Arsize inside {[0:2]};}
+
+		constraint ARBURST{Arburst inside {[0:1]};}
+
+		constraint ALLIGNED_ADDRESS_FOR_ARBURST{((Arburst==1||Arburst==0) && Arsize==1) -> Araddr%2==0;
+							((Arburst==1||Arburst==0) && Arsize==2) -> Araddr%4==0;}
+
+
+	function new(string name = "axi_xtn");
+		super.new(name);
+	endfunction
+
+	function void do_print(uvm_printer printer);
+		super.do_print(printer);
+		printer.print_field("Aresetn",this.Aresetn,1,UVM_HEX);
+
+		//write addr channel
+		printer.print_field("Awid",this.Awid,8,UVM_HEX);
+		printer.print_field("Awlen",this.Awlen,8,UVM_HEX);
+		printer.print_field("Awsize",this.Awsize,3,UVM_HEX);
+		printer.print_field("Awprot",this.Awprot,3,UVM_HEX);
+		printer.print_field("Awburst",this.Awburst,2,UVM_HEX);
+		printer.print_field("Awvalid",this.Awvalid,1,UVM_HEX);
+		printer.print_field("Awready",this.Awready,1,UVM_HEX);
+		printer.print_field("Awaddr",this.Awaddr,32,UVM_HEX);
+
+		//write data channel
+		printer.print_field("Wdata_csr",this.Wdata_csr,32,UVM_HEX);
+			foreach(w_addr[i])
+				printer.print_field($sformatf("w_addr[%0d]",i),this.w_addr[i],32,UVM_HEX);
+			foreach(Wdata[i])
+				printer.print_field($sformatf("Wdata[%0d]",i),this.Wdata[i],32,UVM_HEX);
+			foreach(Wstrb[i])
+				printer.print_field($sformatf("Wstrb[%0d]",i),this.Wstrb[i],4,UVM_HEX);
+
+		printer.print_field("Wlast",this.Wlast,1,UVM_HEX);
+		printer.print_field("Wvalid",this.Wvalid,1,UVM_HEX);
+		printer.print_field("Wready",this.Wready,1,UVM_HEX);
+
+
+		//write resp channel
+		printer.print_field("Bid",this.Bid,8,UVM_HEX);
+		printer.print_field("Bresp",this.Bresp,2,UVM_HEX);
+		printer.print_field("Bvalid",this.Bvalid,1,UVM_HEX);
+		printer.print_field("Bready",this.Bready,1,UVM_HEX);
+
+		//read addr channel
+		printer.print_field("Arid",this.Arid,8,UVM_HEX);
+		printer.print_field("Arlen",this.Arlen,8,UVM_HEX);
+		printer.print_field("Arsize",this.Arsize,3,UVM_HEX);
+		printer.print_field("Arprot",this.Arprot,3,UVM_HEX);
+		printer.print_field("Arburst",this.Arburst,2,UVM_HEX);
+		printer.print_field("Arvalid",this.Arvalid,1,UVM_HEX);
+		printer.print_field("Arready",this.Arready,1,UVM_HEX);
+		printer.print_field("Araddr",this.Araddr,32,UVM_HEX);
+		
+		//read resp data channel
+		printer.print_field("Rid",this.Rid,8,UVM_HEX);
+			foreach(r_addr[i])
+				printer.print_field($sformatf("r_addr[%0d]",i),this.r_addr[i],32,UVM_HEX);
+			foreach(Rdata[i])
+				printer.print_field($sformatf("Rdata[%0d]",i),this.Rdata[i],32,UVM_HEX);
+			foreach(rresp[i])
+				printer.print_field($sformatf("rresp[%0d]",i),this.rresp[i],2,UVM_HEX);
+
+		printer.print_field("Rlast",this.Rlast,1,UVM_HEX);
+		printer.print_field("Rvalid",this.Rvalid,1,UVM_HEX);
+		printer.print_field("Rready",this.Rready,1,UVM_HEX);
+	
+	endfunction
+
+	function strobe_cal();
+		int j=0;
+		bit [31:0] start_address=Awaddr;
+		int number_byte=2**Awsize;
+		int burst_length=Awlen+1;
+		bit [31:0] aligned_address = (start_address/number_byte)*number_byte;
+		Wstrb=new[(Awlen+1)];
+
+		for(int i=(start_address%4);i<((aligned_address%4)+number_byte);i++)
+			begin
+				Wstrb[j][i]=1;
+			end
+
+		for(int l=1;l<burst_length;l++)
+			begin
+				if(Awburst==0)
+					aligned_address = aligned_address;
+				else
+					aligned_address = aligned_address+number_byte;
+				j++;
+				for(int k=(aligned_address%4);k<((aligned_address%4)+number_byte);k++)
+					Wstrb[j][k]=1;
+			end
+	endfunction
+
+	task write_addr_cal();
+		bit [31:0] w_start_address=Awaddr;
+		int w_number_of_bytes=2**Awsize;
+		int w_burst_length=Awlen+1;
+		bit [31:0] w_aligned_address = (int'(w_start_address/w_number_of_bytes))*w_number_of_bytes;
+		w_addr=new[(Awlen+1)];
+		w_addr[0]=w_aligned_address;
+
+		for(int i=2; i<Awlen+1; i=i+1)
+			begin
+				if(Awburst==0)
+					w_addr[i-1] = w_aligned_address;
+				else if(Awburst==1)
+					w_addr[i-1] = w_aligned_address+(i-1)*(w_number_of_bytes);
+
+			end
+	endtask
+
+	task read_addr_cal();
+		bit [31:0] r_start_address=Araddr;
+		int r_number_of_bytes=2**Arsize;
+		int r_burst_length=Arlen+1;
+		bit [31:0] r_aligned_address = (int'(r_start_address/r_number_of_bytes))*r_number_of_bytes;
+		r_addr=new[(Arlen+1)];
+		r_addr[0]=r_aligned_address;
+
+		for(int i=2; i<Arlen+1; i=i+1)
+			begin
+				if(Arburst==0)
+					r_addr[i-1] = r_aligned_address;
+				else if(Arburst==1)
+					r_addr[i-1] = r_aligned_address+(i-1)*(r_number_of_bytes);
+
+			end
+	endtask
+endclass

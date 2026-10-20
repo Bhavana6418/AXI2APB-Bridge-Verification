@@ -1,0 +1,618 @@
+class subscriber extends uvm_compnent;
+	`uvm_component_utils(subscriber)
+
+	axi_xtn axi_xtnh;
+	apb_xtn apb_xtnh;
+	env_config e_cfg;
+
+	uvm_tlm_analysis_fifo #(axi_xtn) fifo_axi_awaddr_h[];
+	uvm_tlm_analysis_fifo #(axi_xtn) fifo_axi_araddr_h[];
+	uvm_tlm_analysis_fifo #(apb_xtn) fifo_apb_h[];
+
+	virtual apb_master_interface.APB_MDRV_MP mvif;
+	virtual apb_interface.APB_MMON_MP vif;
+
+	covergroup axi_cg;
+	
+		ARESETn : coverpoint axi_xtnh.Aresetn{bins reset[]={0,1};}
+
+		// write address channel
+		AWADDR : coverpoint axi_xtnh.Awaddr{bins slave0={[32'h 4000_0000 : 32'h 4000_0fff]}; 
+						   bins slave1={[32'h 4000_1000 : 32'h 4000_1fff]};
+						   bins slave2={[32'h 4000_2000 : 32'h 4000_2fff]};
+						   bins slave3={[32'h 4000_3000 : 32'h 4000_3fff]};
+						   bins slave4={[32'h 4000_4000 : 32'h 4000_4fff]};
+						   bins slave5={[32'h 4000_5000 : 32'h 4000_5fff]};
+						   bins slave6={[32'h 4000_6000 : 32'h 4000_6fff]};
+						   bins slave7={[32'h 4000_7000 : 32'h 4000_7fff]};
+						   bins slave8={[32'h 4000_8000 : 32'h 4000_8fff]};
+						   bins slave9={[32'h 4000_9000 : 32'h 4000_9fff]};}
+
+		AWBURST_TRANSITION : coverpoint axi_xtnh.Awburst{bins Awburst0=(0=>1);
+						     bins Awburst1=(1=>0);}
+
+		AWBURST : coverpoint axi_xtnh.Awburst{bins Awburst[]={0,1};}
+
+		AWSIZE : coverpoint axi_xtnh.Awsize{bins Awsize[]={0,1,2};}
+
+		AWLEN : coverpoint axi_xtnh.Awlen{bins Awlen_low_range={[0:63]};
+						  bins Awlen_mid_range={[64:127]};
+						  bins Awlen_high_range={[128:191]};
+						  bins Awlen_upper_range={[192:255]};
+						  bins Awlen_all_range={[0:255]};}
+
+		AWID : coverpoint axi_xtnh.Awid  {bins Awid_low_range={[0:63]};
+						  bins Awid_mid_range={[64:127]};
+						  bins Awid_high_range={[128:191]};
+						  bins Awid_upper_range={[192:255]};
+						  bins Awid_all_range={[0:255]};}
+	
+		AWPROT : coverpoint axi_xtnh.Awprot{bins Awprot_low_range={[0:1]};
+						    bins Awprot_mid_range={[2:3]};
+						    bins Awprot_high_range={[4:5]};
+						    bins Awprot_upper_range={[6:7]};
+						    bins Awprot_all_range={[0:7]};}
+
+		AWVALID : coverpoint axi_xtnh.Awvalid{bins Awvalid[]={0,1};}
+
+		AWREADY : coverpoint axi_xtnh.Awready{bins Awready[]={0,1};}
+
+		AWVALID_X_AWREADY : cross AWVALID,AWREADY;
+
+		AWLEN_X_AWSIZE_X_AWBURST : cross AWLEN,AWSIZE,AWBURST;
+
+		//write data channel
+		WLAST : coverpoint axi_xtnh.Wlast{bins Wlast[]={0,1};}
+
+		WVALID : coverpoint axi_xtnh.Wvalid{bins Wvalid[]={0,1};}
+
+		WREADY : coverpoint axi_xtnh.Wready{bins Wready[]={0,1};}
+
+		WVALID_X_WLAST_X_WREADY : cross WVALID,WREADY,WLAST;
+
+		WVALID_X_WREADY : cross WVALID,WREADY;
+
+		//write response channel
+		BID : coverpoint axi_xtnh.Bid  {bins Bid_low_range={[0:63]};
+						  bins Bid_mid_range={[64:127]};
+						  bins Bid_high_range={[128:191]};
+						  bins Bid_upper_range={[192:255]};
+						  bins Bid_all_range={[0:255]};}
+
+		BVALID : coverpoint axi_xtnh.Bvalid{bins Bvalid[]={0,1};}
+
+		BREADY : coverpoint axi_xtnh.Bready{bins Bready[]={0,1};}
+
+		BRESP : coverpoint axi_xtnh.Bresp{bins Bresp[]={0,2,3};}
+						
+		BVALID_X_BREADY : cross BVALID,BREADY;
+
+		//read address channel
+		ARADDR : coverpoint axi_xtnh.Araddr{bins slave0={[32'h 4000_0000 : 32'h 4000_0fff]}; 
+						   bins slave1={[32'h 4000_1000 : 32'h 4000_1fff]};
+						   bins slave2={[32'h 4000_2000 : 32'h 4000_2fff]};
+						   bins slave3={[32'h 4000_3000 : 32'h 4000_3fff]};
+						   bins slave4={[32'h 4000_4000 : 32'h 4000_4fff]};
+						   bins slave5={[32'h 4000_5000 : 32'h 4000_5fff]};
+						   bins slave6={[32'h 4000_6000 : 32'h 4000_6fff]};
+						   bins slave7={[32'h 4000_7000 : 32'h 4000_7fff]};
+						   bins slave8={[32'h 4000_8000 : 32'h 4000_8fff]};
+						   bins slave9={[32'h 4000_9000 : 32'h 4000_9fff]};}
+
+		ARBURST_TRANSITION : coverpoint axi_xtnh.Arburst{bins Arburst0=(0=>1);
+						     bins Arburst1=(1=>0);}
+
+		ARBURST : coverpoint axi_xtnh.Arburst{bins Arburst[]={0,1};}
+
+		ARSIZE : coverpoint axi_xtnh.Arsize{bins Arsize[]={0,1,2};}
+
+		ARLEN : coverpoint axi_xtnh.Arlen{bins Arlen_low_range={[0:63]};
+						  bins Arlen_mid_range={[64:127]};
+						  bins Arlen_high_range={[128:191]};
+						  bins Arlen_upper_range={[192:255]};
+						  bins Arlen_all_range={[0:255]};}
+
+		ARID : coverpoint axi_xtnh.Arid  {bins Arid_low_range={[0:63]};
+						  bins Arid_mid_range={[64:127]};
+						  bins Arid_high_range={[128:191]};
+						  bins Arid_upper_range={[192:255]};
+						  bins Arid_all_range={[0:255]};}
+	
+		ARPROT : coverpoint axi_xtnh.Arprot{bins Arprot_low_range={[0:1]};
+						    bins Arprot_mid_range={[2:3]};
+						    bins Arprot_high_range={[4:5]};
+						    bins Arprot_upper_range={[6:7]};
+						    bins Arprot_all_range={[0:7]};}
+
+		ARVALID : coverpoint axi_xtnh.Arvalid{bins Arvalid[]={0,1};}
+
+		ARREADY : coverpoint axi_xtnh.Arready{bins Arready[]={0,1};}
+
+		ARVALID_X_ARREADY : cross ARVALID,ARREADY;
+
+		ARLEN_X_ARSIZE_X_ARBURST : cross ARLEN,ARSIZE,ARBURST;
+
+		//read data channel
+		RID : coverpoint axi_xtnh.Rid  {bins Rid_low_range={[0:63]};
+						  bins Rid_mid_range={[64:127]};
+						  bins Rid_high_range={[128:191]};
+						  bins Rid_upper_range={[192:255]};
+						  bins Rid_all_range={[0:255]};}
+
+		RVALID : coverpoint axi_xtnh.Rvalid{bins Rvalid[]={0,1};}
+
+		RREADY : coverpoint axi_xtnh.Rready{bins Rready[]={0,1};}
+
+		RLAST : coverpoint axi_xtnh.Rlast{bins Rlast[]={0,1};}
+				
+		RVALID_X_RREADY_X_RLAST : cross RVALID,RLAST,RREADY;		
+		RVALID_X_RREADY : cross RVALID,RREADY;
+	
+	endgroup
+
+	covergroup axi_write_data_cg with function sample(int i);
+	
+		WDATA : coverpoint axi_xtnh.Wdata[i] {bins Wdata_low_range={[32'h0000_0000:32'h4444_4444]};
+						     {bins Wdata_mid_range={[32'4444_4445:32'h8888_8888]};
+						     {bins Wdata_high_range={[32'h8888_8889:32'hcccc_cccc]};
+						     {bins Wdata_upper_range={[32'hcccc_cccd:32'hffff_ffff]};
+						     {bins Wdata_all_range={[32'h0000_0000:32'hffff_ffff]};
+
+		WSTRB : coverpoint axi_xtnh.Wstrb[i] {bins Wstrb_low_range={[0:3]};
+						     {bins Wstrb_mid_range={[4:7};
+						     {bins Wstrb_high_range={[8:11]};
+						     {bins Wstrb_all_range={[0:15]};
+	
+	endgroup
+
+	covergroup axi_read_data_cg with function sample(int i);
+		
+		RDATA : coverpoint axi_xtnh.Rdata[i] {bins Rdata_low_range={[32'h0000_0000:32'h4444_4444]};
+						     	bins Rdata_mid_range={[32'h4444_4445:32'h8888_8888]};
+						     	bins Rdata_high_range={[32'h8888_8889:32'hcccc_cccc]};
+						     	bins Rdata_upper_range={[32'hcccc_cccd:32'hffff_ffff]};
+						     	bins Rdata_all_range={[32'h0000_0000:32'hffff_ffff]};}
+
+		RRESP : coverpoint axi_xtnh.Rresp[i] {bins rresp[]={0,2,3};}
+	endgroup
+
+//apb covergroup
+	covergroup apb_cg;
+	
+		PRESETn : coverpoint apb_xtnh.presetn{bins preset[]={0,1};}
+
+		// write address channel
+		PADDR : coverpoint apb_xtnh.paddr{bins slave0={[32'h 4000_0000 : 32'h 4000_0fff]}; 
+						   bins slave1={[32'h 4000_1000 : 32'h 4000_1fff]};
+						   bins slave2={[32'h 4000_2000 : 32'h 4000_2fff]};
+						   bins slave3={[32'h 4000_3000 : 32'h 4000_3fff]};
+						   bins slave4={[32'h 4000_4000 : 32'h 4000_4fff]};
+						   bins slave5={[32'h 4000_5000 : 32'h 4000_5fff]};
+						   bins slave6={[32'h 4000_6000 : 32'h 4000_6fff]};
+						   bins slave7={[32'h 4000_7000 : 32'h 4000_7fff]};
+						   bins slave8={[32'h 4000_8000 : 32'h 4000_8fff]};
+						   bins slave9={[32'h 4000_9000 : 32'h 4000_9fff]};}
+		
+		PSELX : coverpoint apb_xtnh.psel{bins psel[]={0,1};}
+
+		PSEL : coverpoint apb_xtnh.Psel{bins Psel0={10'b0000000001};
+						bins Psel1={10'b0000000010};
+ 						bins Psel2={10'b0000000100};
+						bins Psel3={10'b0000001000};
+						bins Psel4={10'b0000010000};
+						bins Psel5={10'b0000100000};
+						bins Psel6={10'b0001000000};
+						bins Psel7={10'b0010000000};
+						bins Psel8={10'b0100000000};
+						bins Psel9={10'b1000000000};}
+		
+		PSLVERR : coverpoint apb_xtnh.pslverr{bins pslverr[]={0,1};}
+
+		PENABLE : coverpoint apb_xtnh.penable{bins penable[]={0,1};}
+			
+		PPROT : coverpoint apb_xtnh.pprot{bins pprot_low_range={[0:1]};
+						    bins pprot_mid_range={[2:3]};
+						    bins pprot_high_range={[4:5]};
+						    bins pprot_upper_range={[6:7]};
+						    bins pprot_all_range={[0:7]};}
+	
+		PSTRB : coverpoint apb_xtnh.pstrb {bins pstrb_low_range={[0:3]};
+						     bins pstrb_mid_range={[4:7]};
+						     bins pstrb_high_range={[8:11]};
+						     bins pstrb_all_range={[0:15]};}
+
+		PWRITE : coverpoint apb_xtnh.pwrite{bins pwrite[]={0,1};}
+
+		PREADY : coverpoint apb_xtnh.pready{bins pready[]={0,1};}
+			
+		PWDATA : coverpoint apb_xtnh.pwdata {bins pwdata_low_range={[32'h0000_0000:32'h4444_4444]};
+						     bins pwdata_mid_range={[32'h4444_4445:32'h8888_8888]};
+						     bins pwdata_high_range={[32'h8888_8889:32'hcccc_cccc]};
+						     bins pwdata_upper_range={[32'hcccc_cccd:32'hffff_ffff]};
+						     bins pwdata_all_range={[32'h0000_0000:32'hffff_ffff]};}
+
+		PRDATA : coverpoint apb_xtnh.prdata{bins prdata_low_range={[32'h0000_0000:32'h4444_4444]};
+						     bins prdata_mid_range={[32'h4444_4445:32'h8888_8888]};
+						     bins prdata_high_range={[32'h8888_8889:32'hcccc_cccc]};
+						     bins prdata_upper_range={[32'hcccc_cccd:32'hffff_ffff]};
+						     bins prdata_all_range={[32'h0000_0000:32'hffff_ffff]};}
+
+		PSELX_X_PENABLE_X_PREADY : cross PSELX,PENABLE,PREADY;
+
+		PSELX_X_PENABLE : cross PSELX,PENABLE;
+	endgroup
+
+	function new(string name ="subscriber",uvm_component parent);
+		super.new(name,parent);
+		axi_cg=new();
+		axi_write_data_cg=new();
+		axi_read_data_cg=new();
+		apb_cg=new();
+	endfunction
+
+	function void build_phase(uvm_phase phase);
+		super.build_phase(phase);
+
+		if(!uvm_config_db #(env_config)::get(this," ","env_config",e_cfg))
+			`uvm_fatal(get_type_name(),"cannot get the e_cfg from uvm_config_db,plz set_it")
+
+		fifo_axi_awaddr_h=new[e_cfg.no_of_axi_agent];
+		fifo_axi_araddr_h=new[e_cfg.no_of_axi_agent];
+		fifo_apb_h=new[e_cfg.no_of_apb_agent];
+
+		foreach(fifo_axi_awaddr_h[i])
+			fifo_axi_awaddr_h[i]=new($sformatf("fifo_axi_awaddr_h[%0d]",i),this);
+
+
+		foreach(fifo_axi_araddr_h[i])
+			fifo_axi_araddr_h[i]=new($sformatf("fifo_axi_araddr_h[%0d]",i),this);
+
+		foreach(fifo_apb_h[i])
+			fifo_apb_h[i]=new($sformatf("fifo_apb_h[%0d]",i),this);
+
+		foreach(e_cfg.apb_cfg[i])
+			mvif=e_cfg.apb_cfg[i].mvif;
+
+		foreach(e_cfg.apb_cfg[i])
+			vif=e_cfg.apb_cfg[i].vif;
+	endfunction
+
+	task run_phase(uvm_phase phase);
+		super.run_phase(phase);
+		
+		forever
+		  
+		  fork
+			begin
+				fifo_axi_awaddr_h[0].get(axi_xtnh);
+				`uvm_info(get_type_name(),$sformatf("printing from subscriber axi write trnsaction \n %s",axi_xtnh.sprint()),UVM_NONE)
+
+				axi_cg.sample();
+
+				foreach(axi_xtnh.Wdata[i])
+					axi_write_data_cg.sample(i);
+
+			end
+
+			begin
+				fifo_axi_araddr_h[0].get(axi_xtnh);
+				`uvm_info(get_type_name(),$sformatf("printing from subscriber axi read trnsaction \n %s",axi_xtnh.sprint()),UVM_NONE)
+
+
+				foreach(axi_xtnh.Rdata[i])
+					axi_read_data_cg.sample(i);
+
+			end
+
+			begin
+				@(mvif.apb_mdrv_cb);
+				wait(e_cfg.apb_cfg[0].mvif.Psel);
+				@(mvif.apb_mdrv_cb);
+
+					if(e_cfg.apb_cfg[0].vif.Pselx)
+						begin
+							fifo_apb_h[0].get(apb_xtnh);
+							`uvm_info(get_type_name(),$sformatf("printing from subscriber apb_xtn \n %s",apb_xtnh.sprint()),UVM_NONE)
+						end
+
+ 					if(e_cfg.apb_cfg[1].vif.Pselx)
+						begin
+							fifo_apb_h[1].get(apb_xtnh);
+							`uvm_info(get_type_name(),$sformatf("printing from subscriber apb_xtn \n %s",apb_xtnh.sprint()),UVM_NONE)
+						end
+
+					if(e_cfg.apb_cfg[2].vif.Pselx)
+						begin
+							fifo_apb_h[2].get(apb_xtnh);
+							`uvm_info(get_type_name(),$sformatf("printing from subscriber apb_xtn \n %s",apb_xtnh.sprint()),UVM_NONE)
+						end
+
+					if(e_cfg.apb_cfg[3].vif.Pselx)
+						begin
+							fifo_apb_h[3].get(apb_xtnh);
+							`uvm_info(get_type_name(),$sformatf("printing from subscriber apb_xtn \n %s",apb_xtnh.sprint()),UVM_NONE)
+						end
+
+					if(e_cfg.apb_cfg[4].vif.Pselx)
+						begin
+							fifo_apb_h[4].get(apb_xtnh);
+							`uvm_info(get_type_name(),$sformatf("printing from subscriber apb_xtn \n %s",apb_xtnh.sprint()),UVM_NONE)
+						end
+
+					if(e_cfg.apb_cfg[5].vif.Pselx)
+						begin
+							fifo_apb_h[5].get(apb_xtnh);
+							`uvm_info(get_type_name(),$sformatf("printing from subscriber apb_xtn \n %s",apb_xtnh.sprint()),UVM_NONE)
+						end
+
+					if(e_cfg.apb_cfg[6].vif.Pselx)
+						begin
+							fifo_apb_h[6].get(apb_xtnh);
+							`uvm_info(get_type_name(),$sformatf("printing from subscriber apb_xtn \n %s",apb_xtnh.sprint()),UVM_NONE)
+						end
+
+					if(e_cfg.apb_cfg[7].vif.Pselx)
+						begin
+							fifo_apb_h[7].get(apb_xtnh);
+							`uvm_info(get_type_name(),$sformatf("printing from subscriber apb_xtn \n %s",apb_xtnh.sprint()),UVM_NONE)
+						end
+
+					if(e_cfg.apb_cfg[8].vif.Pselx)
+						begin
+							fifo_apb_h[8].get(apb_xtnh);
+							`uvm_info(get_type_name(),$sformatf("printing from subscriber apb_xtn \n %s",apb_xtnh.sprint()),UVM_NONE)
+						end
+
+					if(e_cfg.apb_cfg[9].vif.Pselx)
+						begin
+							fifo_apb_h[9].get(apb_xtnh);
+							`uvm_info(get_type_name(),$sformatf("printing from subscriber apb_xtn \n %s",apb_xtnh.sprint()),UVM_NONE)
+						end
+
+					apb_cg.sample;
+
+			end
+
+	  	  join_any
+	
+	endtask	
+
+endclass
+
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+"scoreboard.sv" 10L, 224C                                                                                                   1,1     
+		RDATA : coverpoint axi_xtnh.Rdata[i] {bins Rdata_low_range={[32'h0000_0000:32'h4444_4444]};
+						     {bins Rdata_mid_range={[32'4444_4445:32'h8888_8888]};
+						     {bins Rdata_high_range={[32'h8888_8889:32'hcccc_cccc]};
+						     {bins Rdata_upper_range={[32'hcccc_cccd:32'hffff_ffff]};
+						     {bins Rdata_all_range={[32'h0000_0000:32'hffff_ffff]};
+
+		RRESP : coverpoint axi_xtnh.Rresp[i] {bins rresp[]={0,2,3};}
+	endgroup
+
+	//apb covergroup
+	covergroup apb_cg;
+	
+		PRESETn : coverpoint apb_xtnh.presetn{bins preset[]={0,1};}
+
+		// write address channel
+		PADDR : coverpoint apb_xtnh.Paddr{bins slave0={[32'h 4000_0000 : 32'h 4000_0fff]}; 
+						   bins slave1={[32'h 4000_1000 : 32'h 4000_1fff]};
+						   bins slave2={[32'h 4000_2000 : 32'h 4000_2fff]};
+						   bins slave3={[32'h 4000_3000 : 32'h 4000_3fff]};
+						   bins slave4={[32'h 4000_4000 : 32'h 4000_4fff]};
+						   bins slave5={[32'h 4000_5000 : 32'h 4000_5fff]};
+						   bins slave6={[32'h 4000_6000 : 32'h 4000_6fff]};
+						   bins slave7={[32'h 4000_7000 : 32'h 4000_7fff]};
+						   bins slave8={[32'h 4000_8000 : 32'h 4000_8fff]};
+						   bins slave9={[32'h 4000_9000 : 32'h 4000_9fff]};}
+		
+		PSELX : coverpoint apb_xtnh.psel{bins psel[]={0,1};}
+
+		PSEL : coverpoint apb_xtnh.Psel{bins Psel0={10'b0000000001};
+						bins Psel1={10'b0000000010};
+ 						bins Psel2={10'b0000000100};
+						bins Psel3={10'b0000001000};
+						bins Psel4={10'b0000010000};
+						bins Psel5={10'b0000100000};
+						bins Psel6={10'b0001000000};
+						bins Psel7={10'b0010000000};
+						bins Psel8={10'b0100000000};
+						bins Psel9={10'b1000000000};}
+		
+		PSLVERR : coverpoint apb_xtnh.pslverr{bins pslverr[]={0,1};}
+
+		PENABLE : coverpoint apb_xtnh.penable{bins penable[]={0,1};}
+			
+		PPROT : coverpoint axi_xtnh.pprot{bins pprot_low_range={[0:1]};
+						    bins pprot_mid_range={[2:3]};
+						    bins pprot_high_range={[4:5]};
+						    bins pprot_upper_range={[6:7]};
+						    bins pprot_all_range={[0:7]};}
+	
+		PSTRB : coverpoint axi_xtnh.pstrb[i] {bins pstrb_low_range={[0:3]};
+						     {bins pstrb_mid_range={[4:7};
+						     {bins pstrb_high_range={[8:11]};
+						     {bins pstrb_all_range={[0:15]};
+
+		PWRITE : coverpoint apb_xtnh.pwrite{bins pwrite[]={0,1};}
+
+		PREADY : coverpoint apb_xtnh.pready{bins pready[]={0,1};}
+			
+		PWDATA : coverpoint axi_xtnh.pwdata[i] {bins pwdata_low_range={[32'h0000_0000:32'h4444_4444]};
+						     {bins pwdata_mid_range={[32'4444_4445:32'h8888_8888]};
+						     {bins pwdata_high_range={[32'h8888_8889:32'hcccc_cccc]};
+						     {bins pwdata_upper_range={[32'hcccc_cccd:32'hffff_ffff]};
+						     {bins pwdata_all_range={[32'h0000_0000:32'hffff_ffff]};
+
+		PRDATA : coverpoint axi_xtnh.prdata[i] {bins prdata_low_range={[32'h0000_0000:32'h4444_4444]};
+						     {bins prdata_mid_range={[32'4444_4445:32'h8888_8888]};
+						     {bins prdata_high_range={[32'h8888_8889:32'hcccc_cccc]};
+						     {bins prdata_upper_range={[32'hcccc_cccd:32'hffff_ffff]};
+						     {bins prdata_all_range={[32'h0000_0000:32'hffff_ffff]};
+
+		PSELX_X_PENABLE_X_PREADY : cross PSELX,PENABLE,PREADY;
+
+		PSELX_X_PENABLE : cross PSELX,PENABLE;
+	endgroup
+
+	function new(string name ="subscriber",ucm_component parent);
+		super.new(name,parent);
+		axi_cg=new();
+		axi_write_data_cg=new();
+		axi_read_data_cg=new();
+		apb_cg=new();
+	endfunction
+
+	function void build_phase(uvm_phase phase);
+		super.build_phase(phase);
+
+		if(!uvm_config_db #(env_config)::get(this," ","env_config",e_cfg))
+			`uvm_fatal(get_type_name(),"cannot get the e_cfg from uvm_config_db,plz set_it")
+
+		fifo_axi_awaddr_h=new[e_cfg.no_of_axi_agts];
+		fifo_axi_araddr_h=new[e_cfg.no_of_axi_agts];
+		fifo_apb_h=new[e_cfg.no_of_apb_agts];
+
+		foreach(fifo_axi_awaddr_h[i])
+			fifo_axi_awaddr_h[i]=new(sformatf("fifo_axi_awaddr_h[%0d]",i),this);
+
+
+		foreach(fifo_axi_araddr_h[i])
+			fifo_axi_araddr_h[i]=new(sformatf("fifo_axi_araddr_h[%0d]",i),this);
+
+		foreach(fifo_apb_h[i])
+			fifo_apb_h[i]=new(sformatf("fifo_apb_h[%0d]",i),this);
+
+		foreach(e_cfg.apb_cfg[i])
+			mvif=e_cfg.apb_cfg[i].mvif;
+
+		foreach(e_cfg.apb_cfg[i])
+			vif=e_cfg.apb_cfg[i].vif;
+	endfunction
+
+	task run_phase(uvm_phase phase);
+		super.run_phase(phase);
+		
+		forever
+		  
+		  fork
+			begin
+				fifo_axi_awaddr_h[0].get(axi_xtnh);
+				`uvm_info(get_type_name(),$sformatf("printing from subscriber axi write trnsaction \n %s",axi_xtnh.sprint()),UVM_NONE)
+
+				axi_cg.sample();
+
+				foreach(axi_xtnh.Wdata[i])
+					axi_write_data_cg.sample(i);
+
+			end
+
+			begin
+				fifo_axi_araddr_h[0].get(axi_xtnh);
+				`uvm_info(get_type_name(),$sformatf("printing from subscriber axi read trnsaction \n %s",axi_xtnh.sprint()),UVM_NONE)
+
+
+				foreach(axi_xtnh.Rdata[i])
+					axi_read_data_cg.sample(i);
+
+			end
+
+			begin
+				@(mvif.apb_mdrv_cb);
+				wait(e_cfg.apb_cfg[0].mvif.Psel);
+				@(mvif.apb_mdrv_cb);
+
+					if(e_cfg.apb_cfg[0].vif.psel)
+						begin
+							fifo_apb_h[0].get(apb_xtnh);
+							`uvm_info(get_type_name(),$sformatf("printing from subscriber apb_xtn \n %s",apb_xtnh.sprint()),UVM_NONE)
+						end
+
+ 					if(e_cfg.apb_cfg[1].vif.psel)
+						begin
+							fifo_apb_h[1].get(apb_xtnh);
+							`uvm_info(get_type_name(),$sformatf("printing from subscriber apb_xtn \n %s",apb_xtnh.sprint()),UVM_NONE)
+						end
+
+					if(e_cfg.apb_cfg[2].vif.psel)
+						begin
+							fifo_apb_h[2].get(apb_xtnh);
+							`uvm_info(get_type_name(),$sformatf("printing from subscriber apb_xtn \n %s",apb_xtnh.sprint()),UVM_NONE)
+						end
+
+					if(e_cfg.apb_cfg[3].vif.psel)
+						begin
+							fifo_apb_h[3].get(apb_xtnh);
+							`uvm_info(get_type_name(),$sformatf("printing from subscriber apb_xtn \n %s",apb_xtnh.sprint()),UVM_NONE)
+						end
+
+					if(e_cfg.apb_cfg[4].vif.psel)
+						begin
+							fifo_apb_h[4].get(apb_xtnh);
+							`uvm_info(get_type_name(),$sformatf("printing from subscriber apb_xtn \n %s",apb_xtnh.sprint()),UVM_NONE)
+						end
+
+					if(e_cfg.apb_cfg[5].vif.psel)
+						begin
+							fifo_apb_h[5].get(apb_xtnh);
+							`uvm_info(get_type_name(),$sformatf("printing from subscriber apb_xtn \n %s",apb_xtnh.sprint()),UVM_NONE)
+						end
+
+					if(e_cfg.apb_cfg[6].vif.psel)
+						begin
+							fifo_apb_h[6].get(apb_xtnh);
+							`uvm_info(get_type_name(),$sformatf("printing from subscriber apb_xtn \n %s",apb_xtnh.sprint()),UVM_NONE)
+						end
+
+					if(e_cfg.apb_cfg[7].vif.psel)
+						begin
+							fifo_apb_h[7].get(apb_xtnh);
+							`uvm_info(get_type_name(),$sformatf("printing from subscriber apb_xtn \n %s",apb_xtnh.sprint()),UVM_NONE)
+						end
+
+					if(e_cfg.apb_cfg[8].vif.psel)
+						begin
+							fifo_apb_h[8].get(apb_xtnh);
+							`uvm_info(get_type_name(),$sformatf("printing from subscriber apb_xtn \n %s",apb_xtnh.sprint()),UVM_NONE)
+						end
+
+					if(e_cfg.apb_cfg[9].vif.psel)
+						begin
+							fifo_apb_h[9].get(apb_xtnh);
+							`uvm_info(get_type_name(),$sformatf("printing from subscriber apb_xtn \n %s",apb_xtnh.sprint()),UVM_NONE)
+						end
+
+					apb_cg.sample;
+
+			end
+
+	  	  join_any
+	
+	endtask	
+
+endclass

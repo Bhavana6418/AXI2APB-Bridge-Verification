@@ -1,0 +1,19 @@
+`timescale 1ns/1ps
+interface apb_master_interface(input bit pclock);
+	
+	logic [9:0] Psel;
+
+clocking apb_mdrv_cb @(posedge pclock);
+	default input #1 output #0;
+	input Psel;
+endclocking
+
+clocking apb_mmon_cb @(posedge pclock);
+	default input #1 output #0;
+	input Psel;
+endclocking
+
+modport APB_MDRV_MP(clocking apb_mdrv_cb);
+modport APB_MMon_MP(clocking apb_mmon_cb);
+
+endinterface

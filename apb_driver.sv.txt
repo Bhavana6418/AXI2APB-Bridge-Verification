@@ -1,0 +1,73 @@
+class apb_driver extends uvm_driver #(uvm_sequence_item);//#(apb_xtn);
+	`uvm_component_utils(apb_driver)
+	
+	virtual apb_interface.APB_DRV_MP vif;
+        virtual apb_master_interface.APB_MDRV_MP mvif;
+
+	apb_config apb_cfg;
+
+
+function new(string name = "apb_driver",uvm_component parent);
+	super.new(name,parent);
+endfunction
+
+function void build_phase(uvm_phase phase);
+	
+	if(!uvm_config_db #(apb_config)::get(this,"","apb_config",apb_cfg))
+		`uvm_fatal("SOURCE_DRIVER","error in get config of env_cfg in shif_env class")
+
+endfunction
+
+function void connect_phase(uvm_phase phase);
+	vif = apb_cfg.vif;
+	mvif = apb_cfg.mvif;
+endfunction
+
+task run_phase(uvm_phase phase);
+	super.run_phase(phase);
+
+	vif.apb_drv_cb.pslverr<=1'b0;
+	vif.apb_drv_cb.pready<=1'b0;
+	vif.apb_drv_cb.prdata<=32'b0;
+	vif.apb_drv_cb.presetn<=1'b0;
+	repeat(3)
+	@(vif.apb_drv_cb);
+	vif.apb_drv_cb.presetn<=1'b1;
+	forever
+		begin
+			seq_item_port.get_next_item(req);
+			send_to_dut(req);
+			seq_item_port.item_done();
+		end
+endtask
+	
+task send_to_dut(apb_xtn xtn);
+
+	if(vif.apb_drv_cb.pwrite==1)
+		begin
+			vif.apb_drv_cb.pready<=1'b0;
+			vif.apb_drv_cb.pslverr<=1'b0;
+			@(vif.apb_drv_cb)
+			@(vif.apb_drv_cb)
+			vif.apb_drv_cb.pready<=1'b1;
+			vif.apb_drv_cb.pslverr<=xtn.pslverr;
+			vif.apb_drv_cb.prdata<=0;
+		end
+	else
+		begin
+			vif.apb_drv_cb.prdata<=xtn.prdata;
+			vif.apb_drv_cb.pready<=1'b0;
+			vif.apb_drv_cb.pslverr<=1'b0;
+			@(vif.apb_drv_cb)
+			vif.apb_drv_cb.pready<=1'b1;
+			vif.apb_drv_cb.pslverr<=xtn.pslverr;
+		end
+	
+	wait(vif.apb_drv_cb.psel && vif.apb_drv_cb.penable);
+
+	`uvm_info(get_type_name(),$sformatf("printing from apb_driver \n %s",xtn.sprint()),UVM_LOW)
+
+endtask
+	
+	
+endclass

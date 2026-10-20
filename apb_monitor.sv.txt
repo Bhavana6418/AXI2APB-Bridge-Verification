@@ -1,0 +1,98 @@
+class apb_monitor extends uvm_monitor ;
+	`uvm_component_utils(apb_monitor)
+	
+	uvm_analysis_port #(axi_xtn) mon2subandsb;
+
+	virtual apb_interface.APB_MON_MP vif;
+        virtual apb_master_interface.APB_MMON_MP mvif;
+	
+
+	apb_config apb_cfg;
+	apb_xtn xtn;
+
+	bit [7:0] awlen;
+	bit [7:0] arlen;
+
+
+function new(string name = "apb_monitor",uvm_component parent);
+	super.new(name,parent);
+
+//	monitor_port = new("monitor_port",this);
+endfunction
+
+function void build_phase(uvm_phase phase);
+	super.build_phase(phase);
+
+	if(!uvm_config_db #(apb_config)::get(this,"","apb_config",apb_cfg))
+		`uvm_fatal("SOURCE_MONITOR","error in get config of env_cfg in shif_env class")
+
+	mon2subandsb = new("mon2subandsb",this);
+
+endfunction
+
+function void connect_phase(uvm_phase phase);
+	vif = apb_cfg.vif;
+	mvif = apb_cfg.mvif;
+endfunction
+
+task run_phase(uvm_phase phase);
+	super.run_phase(phase);
+
+	forever
+		begin
+			collect_data();
+		end
+endtask
+
+task collect_data();
+
+	xtn=apb_xtn::type_id::create("xtn");
+
+	@(vif.apb_mon_cb);
+
+	xtn.presetn=vif.apb_mon_cb.presetn;
+	xtn.psel=vif.apb_mon_cb.psel;
+	xtn.penable=vif.apb_mon_cb.penable;
+	xtn.pslverr=vif.apb_mon_cb.pslverr;
+	xtn.pready=vif.apb_mon_cb.pready;
+
+	wait(vif.apb_mon_cb.psel==1 && vif.apb_mon_cb.penable==1 && vif.apb_mon_cb.pready==1);
+
+	xtn.psel=vif.apb_mon_cb.psel;
+	xtn.Psel=mvif.apb_mmon_cb.Psel;
+	xtn.penable=vif.apb_mon_cb.penable;
+	xtn.pslverr=vif.apb_mon_cb.pslverr;
+	xtn.pready=vif.apb_mon_cb.pready;
+
+	if(vif.apb_mon_cb.pwrite==0)
+		begin
+			xtn.paddr=vif.apb_mon_cb.paddr;
+			xtn.pprot=vif.apb_mon_cb.pprot;
+			xtn.prdata=vif.apb_mon_cb.prdata;
+			xtn.prresp=xtn.pslverr?2:0;
+			xtn.PADDR_READ.push_back(xtn.paddr);
+			xtn.PRRESP.push_back(xtn.prresp);
+			xtn.PRDATA.push_back(xtn.prdata);
+			xtn.RPROT.push_back(xtn.pprot);
+		end
+
+	if(vif.apb_mon_cb.pwrite==1)
+		begin
+			xtn.paddr=vif.apb_mon_cb.paddr;
+			xtn.pprot=vif.apb_mon_cb.pprot;
+			xtn.pwdata=vif.apb_mon_cb.pwdata;
+			xtn.pstrb=vif.apb_mon_cb.pstrb;
+			xtn.pwresp=xtn.pslverr?2:0;
+			xtn.PADDR_WRITE.push_back(xtn.paddr);
+			xtn.PWRESP.push_back(xtn.pwresp);
+			xtn.PWDATA.push_back(xtn.pwdata);
+			xtn.WPROT.push_back(xtn.pprot);
+			xtn.PSTRB.push_back(xtn.pstrb);
+		end
+
+//mon2subandsb.write(xtn);
+	`uvm_info(get_type_name(),$sformatf("printing from apb_monitor \n %s",xtn.sprint()),UVM_NONE)
+
+endtask
+
+endclass

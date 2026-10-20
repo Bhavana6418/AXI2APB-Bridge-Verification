@@ -1,0 +1,87 @@
+`timescale 1ns/1ps
+interface axi_interface #(parameter AW=32,
+		   	  parameter DW=32,
+		   	  parameter IW=4,
+		   	  parameter LW=4)
+		 
+		 (input bit aclock);
+
+		 logic Aresetn;
+		 
+		//AW channel
+		 logic [IW-1:0] Awid;
+		 logic [AW-1:0] Awaddr;
+		 logic [LW-1:0] Awlen;
+		 logic [2:0] Awsize;
+		 logic [1:0] Awburst;
+		 logic [2:0] Awprot;
+		 logic Awvalid;
+		 logic Awready;
+
+		//WD channel
+		 logic [DW-1:0] Wdata;
+	 	 logic [(DW/8)-1:0] Wstrb;
+		 logic Wlast,Wvalid;
+		 logic Wready;
+
+		//Write Response channel
+		 logic [IW-1:0] Bid;
+	 	 logic [1:0] Bresp;
+		 logic Bvalid;
+		 logic Bready;
+
+		//read addr channel
+		 logic [IW-1:0] Arid;
+		 logic [AW-1:0] Araddr;
+		 logic [LW-1:0] Arlen;
+		 logic [2:0] Arsize;
+	 	 logic [1:0] Arburst;
+		 logic [2:0] Arprot;
+		 logic Arvalid;
+		 logic Arready;
+
+		//read data channel
+		 logic [IW-1:0] Rid;
+		 logic [DW-1:0]  Rdata;
+		 logic [1:0] rresp;
+		 logic Rready;
+		 logic Rlast;
+		 logic Rvalid;
+
+
+clocking axi_drv_cb@(posedge aclock);
+	default input #1 output #0;
+
+	output Aresetn,Awid,Awaddr,Awlen,Awsize,Awburst,Awprot,Awvalid;
+	output Wdata,Wstrb,Wlast,Wvalid;
+	output Bready;
+	output Arid,Araddr,Arlen,Arsize,Arburst,Arprot,Arvalid;
+	output Rready;
+
+	input Awready,Wready;
+	input Bid,Bresp,Bvalid;
+	input Arready;
+	input Rid,Rdata,rresp,Rlast,Rvalid;
+
+endclocking
+
+clocking axi_mon_cb@(posedge aclock);
+	default input #1 output #0;
+
+	input Aresetn,Awid,Awaddr,Awlen,Awsize,Awburst,Awprot,Awvalid;
+	input Wdata,Wstrb,Wlast,Wvalid;
+	input Bready;
+	input Arid,Araddr,Arlen,Arsize,Arburst,Arprot,Arvalid;
+	input Rready;
+
+	input Awready,Wready;
+	input Bid,Bresp,Bvalid;
+	input Arready;
+	input Rid,Rdata,rresp,Rlast,Rvalid;
+	
+endclocking
+
+modport AXI_DRV_MP(clocking axi_drv_cb);
+modport AXI_MON_MP(clocking axi_mon_cb);
+
+endinterface

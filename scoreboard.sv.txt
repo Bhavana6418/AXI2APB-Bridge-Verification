@@ -1,0 +1,161 @@
+class scoreboard extends uvm_scoreboard;
+        `uvm_component_utils(scoreboard)
+
+	env_config e_cfg;
+
+	apb_xtn apb_xtnh;
+	axi_xtn axi_awaddr_h,axi_araddr_h;
+
+	static int pwresp[$];
+	bit [1:0]result=0;
+	bit [1:0] update_result;
+
+	uvm_tlm_analysis_fifo #(apb_xtn)fifo_apb_h[];
+	uvm_tlm_analysis_fifo #(axi_xtn)fifo_axi_awaddr_h[];
+	uvm_tlm_analysis_fifo #(axi_xtn)fifo_axi_araddr_h[];
+
+        function new(string name="scoreboard",uvm_component parent);
+                super.new(name,parent);
+        endfunction
+
+	function void build_phase(uvm_phase phase);
+	 super.build_phase(phase);
+	 
+	 if((!uvm_config_db#(env_config)::get(this,"","env_config",e_cfg))
+	  `uvm_fatal("scoreboard","cannot get the e_cfg from uvm_config_db.have u plx set it?")
+
+	 fifo_apb_h=new[e_cfg.no_of_apb_agts];
+		foreach(fifo_apb_h[i])
+		 fifo_apb_h[i]=new($sformatf("fifo_apb_h[%0d]",i),this);
+
+	 fifo_axi_awaddr_h=new(e_cfg.no_of_axi_agts];
+		foreach(fifo_axi_awaddr_h[i])
+		 fifo_axi_awaddr_h[i]=new($sformatf("fifo_axi_awaddr_h[%0d]",i),this);
+
+	 fifo_axi_araddr_h=new(e_cfg.no_of_axi_agts];
+		foreach(fifo_axi_araddr_h[i])
+		 fifo_axi_araddr_h[i]=new($sformatf("fifo_axi_araddr_h[%0d]",i),this);
+
+	endfunction
+
+	task run_phase(uvm_phase phase);
+	 	fork
+
+		  begin
+		    forever 
+			begin
+			  foreach(fifo_axi_awaddr_h[i])
+				fifo_axi_awaddr_h[i].get(axi_awaddr_h);
+				 `uvm_info(get_type_name(),$sformatf("printing from scoreboard axi write xtn \n %s",axi_awaddr_h.sprint()),UVM_NONE)
+			end
+		  end
+
+		  begin
+		    forever 
+			begin
+			  foreach(fifo_axi_araddr_h[i])
+				fifo_axi_araddr_h[i].get(axi_araddr_h);
+				 `uvm_info(get_type_name(),$sformatf("printing from scoreboard axi read xtn \n %s",axi_araddr_h.sprint()),UVM_NONE)
+			end
+		  end
+
+		  begin
+		    forever 
+			begin
+			  foreach(fifo_apb_h[i])
+				fifo_apb_h[i].get(apb_xtnh);
+				 `uvm_info(get_type_name(),$sformatf("printing from scoreboard apb xtn \n %s",axi_xtnh.sprint()),UVM_NONE)
+			end
+		  end
+		
+		join_any
+	
+	endtask
+
+	function void check_phase(uvm_phase phase);
+	
+		if(axi_awaddr_h.AXI_AWADDR == apb_xtnh.PADDR_WRITE)
+		  `uvm_info(get_type_name(),"AWADDR comparision is successfull with PADDR", UVM_NONE)
+		else
+		  `uvm_error(get_type_name(),"AWADDR comparision is failed with PADDR")
+		  `uvm_info(get_type_name(), $sformatf("scoreboard check_phase : \n APB PADDR_WRITE= \n%p,\n AXI AXI_AWADDR=\n%p",apb_xtnh.PADDR_WRITE, axi_awaddr_h.AXI_AWADDR),UVM_NONE)
+
+		if(axi_araddr_h.AXI_ARADDR == apb_xtnh.PADDR_READ)
+		  `uvm_info(get_type_name(),"ARADDR comparision is successfull with PADDR", UVM_NONE)
+		else
+		  `uvm_error(get_type_name(),"ARADDR comparision is failed with PADDR")
+		  `uvm_info(get_type_name(), $sformatf("scoreboard check_phase : \n APB PADDR_READ= \n%p,\n AXI AXI_ARADDR=\n%p",apb_xtnh.PADDR_READ, axi_araddr_h.AXI_ARADDR),UVM_NONE)
+
+		if(axi_awaddr_h.AXI_WDATA == apb_xtnh.PWDATA)
+		  `uvm_info(get_type_name(),"WDATA comparision is successfull with PWDATA", UVM_NONE)
+		else
+		  `uvm_error(get_type_name(),"WDATA comparision is failed with PWDATA")
+		  `uvm_info(get_type_name(), $sformatf("scoreboard check_phase : \n APB PWDATA= \n%p,\n AXI AXI_WDATA=\n%p",apb_xtnh.PWDATA, axi_awaddr_h.AXI_WDATA),UVM_NONE)
+
+		if(axi_araddr_h.AXI_RDATA == apb_xtnh.PRDATA)
+		  `uvm_info(get_type_name(),"RDATA comparision is successfull with PRDATA", UVM_NONE)
+		else
+		  `uvm_error(get_type_name(),"RDATA comparision is failed with PRDATA")
+		  `uvm_info(get_type_name(), $sformatf("scoreboard check_phase : \n APB PRDATA= \n%p,\n AXI AXI_RDATA=\n%p",apb_xtnh.PRDATA, axi_araddr_h.AXI_RDATA),UVM_NONE)
+
+		if(axi_araddr_h.AXI_WSTRB == apb_xtnh.PSTRB)
+		  `uvm_info(get_type_name(),"WSTROBE comparision is successfull with PSTRB", UVM_NONE)
+		else
+		  `uvm_error(get_type_name(),"WSTROBE comparision is failed with PSTRB")
+		  `uvm_info(get_type_name(), $sformatf("scoreboard check_phase : \n APB PSTRB= \n%p,\n AXI AXI_WSTRB=\n%p",apb_xtnh.PSTRB, axi_araddr_h.AXI_WSTRB),UVM_NONE)
+
+		if(axi_araddr_h.AXI_ARPROT == apb_xtnh.RPROT)
+		  `uvm_info(get_type_name(),"ARPROT comparision is successfull with RPROT", UVM_NONE)
+		else
+		  `uvm_error(get_type_name(),"ARPROT comparision is failed with RPROT")
+		  `uvm_info(get_type_name(), $sformatf("scoreboard check_phase : \n APB RPROT= \n%p,\n AXI AXI_ARPROT=\n%p",apb_xtnh.RPROT, axi_araddr_h.AXI_ARPROT),UVM_NONE)
+
+		if(axi_awaddr_h.AXI_AWPROT == apb_xtnh.WPROT)
+		  `uvm_info(get_type_name(),"AWPROT comparision is successfull with WPROT", UVM_NONE)
+		else
+		  `uvm_error(get_type_name(),"AWPROT comparision is failed with WPROT")
+		  `uvm_info(get_type_name(), $sformatf("scoreboard check_phase : \n APB WPROT= \n%p,\n AXI AXI_AWPROT=\n%p",apb_xtnh.WPROT, axi_awaddr_h.AXI_AWPROT),UVM_NONE)
+
+		if(axi_awaddr_h.AXI_AWID == axi_awaddr_h.AXI_BID)
+		  `uvm_info(get_type_name(),"AWID and BID comparision is successfull", UVM_NONE)
+		else
+		  `uvm_error(get_type_name(),"AWID and BID comparision is failed")
+		  `uvm_info(get_type_name(), $sformatf("scoreboard check_phase : \n AXI AXI_AWID= \n%p,\n AXI AXI_BID=\n%p",axi_awaddr_h.AXI_AWID, axi_awaddr_h.AXI_BID),UVM_NONE)
+
+		if(axi_araddr_h.AXI_ARID == axi_araddr_h.AXI_RID)
+		  `uvm_info(get_type_name(),"ARID and RID comparision is successfull", UVM_NONE)
+		else
+		  `uvm_error(get_type_name(),"ARID and RID comparision is failed")
+		  `uvm_info(get_type_name(), $sformatf("scoreboard check_phase : \n AXI AXI_ARID= \n%p,\n AXI AXI_RID=\n%p",axi_araddr_h.AXI_ARID, axi_araddr_h.AXI_RID),UVM_NONE)
+
+		if(axi_araddr_h.AXI_RRESP == apb_xtnh.PRRESP)
+		  `uvm_info(get_type_name(),"RRESP comparision is successfull", UVM_NONE)
+		else
+		  `uvm_error(get_type_name(),"RRESP comparision is failed")
+		  `uvm_info(get_type_name(), $sformatf("scoreboard check_phase : \n  APB PRRESP= \n%p,\n AXI AXI_RRESP=\n%p",apb_xtnh.PRRESP, axi_araddr_h.AXI_RRESP),UVM_NONE)
+
+
+		for(int i=0; i<apb_xtnh.PWRESP.size(); i=i+axi_awaddr_h.Awlen+1)
+			begin
+				result = apb_xtnh.PWRESP[i];
+				
+				for(int j=i+1; j<i+axi_awaddr_h.Awlen+1 && j<apb_xtnh.PWRESP.size(); j++)
+					begin
+						result = result | apb_xtnh.PWRESP[j];
+					end
+
+				if(result==2)
+					update_result=2;
+				else
+					update_result=0;
+					pwresp.push_back(update_result);
+
+		if(axi_awaddr_h.AXI_BRESP == pwresp)
+		  `uvm_info(get_type_name(),"BRESP comparision is successfull", UVM_NONE)
+		else
+		  `uvm_error(get_type_name(),"BRESP comparision is failed")
+		  `uvm_info(get_type_name(), $sformat("scoreboard check_phase : \n APB pwresp= \n%p,\n AXI AXI_BRESP=\n%p",pwresp ,axi_awaddr_h.AXI_BRESP),UVM_NONE)
+
+	endfunction
+
+endclass

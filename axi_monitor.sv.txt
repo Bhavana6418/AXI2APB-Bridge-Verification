@@ -1,0 +1,259 @@
+class axi_monitor extends uvm_monitor ;
+	`uvm_component_utils(axi_monitor)
+	
+	uvm_analysis_port #(axi_xtn) mon2subandsb;
+
+	virtual axi_interface.AXI_MON_MP axi_vif;
+
+	//axi config  cls handle
+	axi_config axi_cfg;
+	axi_xtn xtn_waddr, xtn_raddr;
+
+	//axi xtn cls queues declaration(yo store axi xtn)
+	axi_xtn write_addr[$], write_data[$], read_addr[$];
+
+	//semaphore for axi write channels
+	semaphore sem = new();
+	semaphore sem1 = new();
+	semaphore sem2 = new(1);
+	semaphore sem3 = new(1);
+	semaphore sem4 = new(1);
+
+	//semaphore for axi read channels
+	semaphore sem5 = new();
+	semaphore sem6 = new(1);
+	semaphore sem7 = new(1);
+
+function new(string name = "axi_monitor",uvm_component parent);
+	super.new(name,parent);
+
+	mon2subandsb = new("mon2subandsb",this);
+endfunction
+
+function void build_phase(uvm_phase phase);
+	super.build_phase(phase);
+
+	if(!uvm_config_db #(axi_config)::get(this,"","axi_config",axi_cfg))
+		`uvm_fatal("SOURCE_MONITOR","error in get config of env_cfg in shif_env class")
+
+endfunction
+
+function void connect_phase(uvm_phase phase);
+	super.connect_phase(phase);
+	axi_vif = axi_cfg.axi_vif;
+endfunction
+
+task run_phase(uvm_phase phase);
+	forever
+		begin
+			collect_data();
+		end
+endtask
+
+//monitor logic for axi
+task collect_data();
+
+	fork
+
+		begin
+			sem2.get(1);
+			write_address_channel();
+			sem.put(1);
+			sem2.put(1);
+		end
+
+		begin
+			sem.get(1);
+			sem3.get(1);
+			write_data_channel(write_addr.pop_front());
+			sem1.put(1);
+			sem3.put(1);
+		end
+
+		begin
+			sem1.get(1);
+			sem4.get(1);
+			write_response_channel(write_data.pop_front());
+			sem4.put(1);
+		end
+
+		begin
+			sem6.get(1);
+			read_address_channel();
+			sem5.put(1);
+			sem6.put(1);
+		end
+
+		begin
+			sem5.get(1);
+			sem7.get(1);
+			read_data_channel(read_addr.pop_front());
+			sem7.put(1);
+		end
+
+	join_any
+endtask
+
+//monitor logic for write address channel
+task write_address_channel();
+	xtn_waddr=axi_xtn::type_id::create("xtn_waddr");
+
+	@(axi_vif.axi_mon_cb);
+
+	xtn_waddr.Aresetn=axi_vif.axi_mon_cb.Aresetn;
+
+	wait(axi_vif.axi_mon_cb.Awvalid==1 && axi_vif.axi_mon_cb.Awready==1);
+
+	xtn_waddr.Awid=axi_vif.axi_mon_cb.Awid;
+	xtn_waddr.Awvalid=axi_vif.axi_mon_cb.Awvalid;
+	xtn_waddr.Awready=axi_vif.axi_mon_cb.Awready;
+	xtn_waddr.Awsize=axi_vif.axi_mon_cb.Awsize;
+	xtn_waddr.Awlen=axi_vif.axi_mon_cb.Awlen;
+	xtn_waddr.Awburst=axi_vif.axi_mon_cb.Awburst;
+	xtn_waddr.Awaddr=axi_vif.axi_mon_cb.Awaddr;
+	xtn_waddr.Awprot=axi_vif.axi_mon_cb.Awprot;
+	xtn_waddr.write_addr_cal();
+
+	write_addr.push_back(xtn_waddr);
+
+	if(xtn_waddr.Awaddr!=32'h 4000_A000)
+		begin
+			xtn_waddr.AXI_AWID.push_back(xtn_waddr.Awid);
+			foreach(xtn_waddr.w_addr[i])
+				begin
+					xtn_waddr.AXI_AWADDR.push_back(xtn_waddr.w_addr[i]);
+					xtn_waddr.AXI_AWPROT.push_back(xtn_waddr.Awprot);
+				end
+		end
+
+	@(axi_vif.axi_mon_cb);
+
+	mon2subandsb.write(xtn_waddr);
+	`uvm_info(get_type_name(),$sformatf("printing from write addr \n %s",xtn_waddr.sprint()),UVM_NONE)
+
+endtask
+
+//monitor logic for write data channel
+task write_data_channel(axi_xtn xtn_waddr);
+
+	xtn_waddr.Wdata=new[xtn_waddr.Awlen+1];
+	xtn_waddr.Wstrb=new[xtn_waddr.Wdata.size()];
+
+	foreach(xtn_waddr.Wdata[i])
+		begin
+
+		@(axi_vif.axi_mon_cb);
+		wait(axi_vif.axi_mon_cb.Wvalid==1 && axi_vif.axi_mon_cb.Wready==1);
+		xtn_waddr.Wdata[i]=axi_vif.axi_mon_cb.Wdata;
+		xtn_waddr.Wstrb[i]=axi_vif.axi_mon_cb.Wstrb;
+		xtn_waddr.Wvalid=axi_vif.axi_mon_cb.Wvalid;
+		xtn_waddr.Wready=axi_vif.axi_mon_cb.Wready;
+
+		if(xtn_waddr.Awaddr!=32'h 4000_A000)
+			begin
+				xtn_waddr.AXI_WDATA.push_back(xtn_waddr.Wdata[i]);
+				xtn_waddr.AXI_WSTRB.push_back(xtn_waddr.Wstrb[i]);
+			end
+
+		if(i==xtn_waddr.Wdata.size()-1)
+			xtn_waddr.Wlast=axi_vif.axi_mon_cb.Wlast;
+
+			@(axi_vif.axi_mon_cb);
+		end
+	
+	mon2subandsb.write(xtn_waddr);
+	write_data.push_back(xtn_waddr);
+	`uvm_info(get_type_name(),$sformatf("printing from write data \n %s",xtn_waddr.sprint()),UVM_NONE)
+
+endtask
+
+//monitor logic for write resp channel
+task write_response_channel(axi_xtn xtn_waddr);
+
+	@(axi_vif.axi_mon_cb);
+	wait(axi_vif.axi_mon_cb.Bvalid==1 && axi_vif.axi_mon_cb.Bready==1);
+
+	xtn_waddr.Bid=axi_vif.axi_mon_cb.Bid;
+	xtn_waddr.Bvalid=axi_vif.axi_mon_cb.Bvalid;
+	xtn_waddr.Bready=axi_vif.axi_mon_cb.Bready;
+	xtn_waddr.Bresp=axi_vif.axi_mon_cb.Bresp;
+			
+	if(xtn_waddr.Awaddr!=32'h 4000_A000)
+		begin
+			xtn_waddr.AXI_BRESP.push_back(xtn_waddr.Bresp);
+			xtn_waddr.AXI_BID.push_back(xtn_waddr.Bid);
+		end
+
+	@(axi_vif.axi_mon_cb);
+	mon2subandsb.write(xtn_waddr);
+	`uvm_info(get_type_name(),$sformatf("printing from write resp \n %s",xtn_waddr.sprint()),UVM_NONE)
+
+endtask
+
+//monitor logic for read address channel
+task read_address_channel();
+	xtn_raddr=axi_xtn::type_id::create("xtn_raddr");
+
+	@(axi_vif.axi_mon_cb);
+	wait(axi_vif.axi_mon_cb.Arvalid==1 && axi_vif.axi_mon_cb.Arready==1);
+
+	xtn_raddr.Arid=axi_vif.axi_mon_cb.Arid;
+	xtn_raddr.Arvalid=axi_vif.axi_mon_cb.Arvalid;
+	xtn_raddr.Arready=axi_vif.axi_mon_cb.Arready;
+	xtn_raddr.Arsize=axi_vif.axi_mon_cb.Arsize;
+	xtn_raddr.Arlen=axi_vif.axi_mon_cb.Arlen;
+	xtn_raddr.Arburst=axi_vif.axi_mon_cb.Arburst;
+	xtn_raddr.Araddr=axi_vif.axi_mon_cb.Araddr;
+	xtn_raddr.Arprot=axi_vif.axi_mon_cb.Arprot;
+	xtn_raddr.read_addr_cal();
+	read_addr.push_back(xtn_raddr);
+
+	foreach(xtn_raddr.r_addr[i])
+		begin
+			xtn_raddr.AXI_ARADDR.push_back(xtn_raddr.r_addr[i]);
+			xtn_raddr.AXI_ARPROT.push_back(xtn_raddr.Arprot);
+			xtn_raddr.AXI_ARID.push_back(xtn_raddr.Arid);
+		end
+
+	@(axi_vif.axi_mon_cb);
+	mon2subandsb.write(xtn_raddr);
+	`uvm_info(get_type_name(),$sformatf("printing from read address \n %s",xtn_raddr.sprint()),UVM_NONE)
+
+endtask
+
+//monitor logic for read data channel
+task read_data_channel(axi_xtn xtn_raddr);
+	
+	xtn_raddr.Rdata=new[xtn_raddr.Arlen+1];
+	xtn_raddr.rresp=new[xtn_raddr.Arlen+1];
+
+	foreach(xtn_raddr.Rdata[i])
+		begin
+
+		@(axi_vif.axi_mon_cb);
+		wait(axi_vif.axi_mon_cb.Rvalid==1 && axi_vif.axi_mon_cb.Rready==1);
+		xtn_raddr.Rid=axi_vif.axi_mon_cb.Rid;
+		xtn_raddr.Rvalid=axi_vif.axi_mon_cb.Rvalid;
+		xtn_raddr.Rready=axi_vif.axi_mon_cb.Rready;
+		xtn_raddr.Rdata[i]=axi_vif.axi_mon_cb.Rdata;
+		xtn_raddr.rresp[i]=axi_vif.axi_mon_cb.rresp;
+		
+		xtn_raddr.AXI_RID.push_back(xtn_waddr.Rid);
+		xtn_raddr.AXI_RRESP.push_back(xtn_waddr.rresp[i]);
+
+		xtn_raddr.AXI_RDATA.push_back(xtn_waddr.Rdata[i]);
+		
+
+		if(i==xtn_raddr.Rdata.size()-1)
+			xtn_raddr.Rlast=axi_vif.axi_mon_cb.Rlast;
+
+			@(axi_vif.axi_mon_cb);
+		end
+	
+	mon2subandsb.write(xtn_raddr);
+	//write_data.push_back(xtn_waddr);
+	`uvm_info(get_type_name(),$sformatf("printing from read data \n %s",xtn_raddr.sprint()),UVM_NONE)
+
+endtask
+
+endclass

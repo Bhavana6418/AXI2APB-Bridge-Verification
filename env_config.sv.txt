@@ -1,0 +1,19 @@
+class env_config extends uvm_object;
+ `uvm_object_utils(env_config)
+  axi_config axi_cfg[];           //as we can change in the future to 2*3.so we are declaring it as dynamic.
+  apb_config apb_cfg[];
+
+  int no_of_axi_agts=1;
+  int no_of_apb_agts=10;
+  bit has_axi_agts=1;
+  bit has_apb_agts=1;
+//  bit has_scoreboard=1;
+  
+  uvm_active_passive_enum is_active=UVM_ACTIVE;
+  
+ //constructor new method
+ function new(string name = "env_config");
+  super.new(name);
+ endfunction
+
+endclass

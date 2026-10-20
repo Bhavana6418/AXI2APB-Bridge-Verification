@@ -1,0 +1,218 @@
+class axi_driver extends uvm_driver #(axi_xtn);
+	`uvm_component_utils(axi_driver)
+	
+	virtual axi_interface.AXI_DRV_MP axi_vif;
+
+	axi_config axi_cfg;
+
+	//axi transaction class queues declrations to store the axi transactions
+	axi_xtn write_addr[$], write_data[$], write_response[$], read_addr[$], read_data[$];
+
+	//semaphores for write channel
+	semaphore sem=new();
+	semaphore sem1=new();
+	semaphore sem2=new(1);
+	semaphore sem3=new(1);
+	semaphore sem4=new(1);
+
+	//semaphores for read channel
+	semaphore sem5=new();
+	semaphore sem6=new(1);
+	semaphore sem7=new(1);
+
+function new(string name = "axi_driver",uvm_component parent);
+	super.new(name,parent);
+endfunction
+
+function void build_phase(uvm_phase phase);
+	
+	if(!uvm_config_db #(axi_config)::get(this,"","axi_config",axi_cfg))
+		`uvm_fatal("SOURCE_DRIVER","error in get config of env_cfg in shif_env class")
+
+endfunction
+
+function void connect_phase(uvm_phase phase);
+	axi_vif = axi_cfg.axi_vif;
+endfunction
+
+task run_phase(uvm_phase phase);
+	super.run_phase(phase);
+
+	axi_vif.axi_drv_cb.Aresetn<=1'b0;
+	repeat(5)
+	@(axi_vif.axi_drv_cb);
+	axi_vif.axi_drv_cb.Aresetn<=1'b1;
+
+	forever
+		begin
+			seq_item_port.get_next_item(req);
+			send_to_dut(req);
+			seq_item_port.item_done();
+		end
+endtask
+
+task send_to_dut(axi_xtn xtn);
+	
+	//write channel queues to store transactions
+	write_addr.push_back(xtn);
+	write_data.push_back(xtn);
+	write_response.push_back(xtn);
+
+	//read channel queues to store transactions
+	read_addr.push_back(xtn);
+	read_data.push_back(xtn);
+
+	fork
+		begin
+			sem2.get(1);
+			write_address_channel(write_addr.pop_front());
+			sem.put(1);
+			sem2.put(1);
+		end
+
+		begin
+			sem1.get(1);
+			sem4.get(1);
+			write_response_channel(write_response.pop_front());
+			sem4.put(1);
+		end
+
+		begin
+			sem2.get(1);
+			write_address_channel(write_addr.pop_front());
+			sem.put(1);
+			sem2.put(1);
+		end
+
+		begin
+			sem6.get(1);
+			read_address_channel(read_addr.pop_front());
+			sem5.put(1);
+			sem6.put(1);
+		end
+
+		begin
+			sem5.get(1);
+			sem7.put(1);
+			read_data_channel(read_data.pop_front());
+			sem7.put(1);
+		end	
+
+	join_any
+
+	`uvm_info(get_type_name(),$sformatf("printing from axi_driver \n %s",xtn.sprint()),UVM_NONE)
+
+endtask
+
+//task for write address channel
+task write_address_channel(axi_xtn xtn);
+	@(axi_vif.axi_drv_cb);
+	axi_vif.axi_drv_cb.Awvalid<=1'b1;
+	axi_vif.axi_drv_cb.Aresetn<=xtn.Aresetn;
+	axi_vif.axi_drv_cb.Awid<=xtn.Awid;
+	axi_vif.axi_drv_cb.Awsize<=xtn.Awsize;
+	axi_vif.axi_drv_cb.Awaddr<=xtn.Awaddr;
+	axi_vif.axi_drv_cb.Awlen<=xtn.Awlen;
+	axi_vif.axi_drv_cb.Awburst<=xtn.Awburst;
+	axi_vif.axi_drv_cb.Awprot<=xtn.Awprot;
+
+	@(axi_vif.axi_drv_cb);
+	wait(axi_vif.axi_drv_cb.Awready==1);
+
+	axi_vif.axi_drv_cb.Awvalid<=1'b0;
+
+	repeat($urandom_range(1,5))
+	@(axi_vif.axi_drv_cb);
+
+	`uvm_info(get_type_name(),$sformatf("printing from the write address \n %s",xtn.sprint()),UVM_NONE)
+
+endtask
+
+//task for write data channel
+task write_data_channel(axi_xtn xtn);
+
+	foreach(xtn.Wdata[i])
+		begin
+			axi_vif.axi_drv_cb.Wvalid<=1'b1;
+			
+			if(axi_vif.axi_drv_cb.Awaddr==32'h 4000_A000)
+				axi_vif.axi_drv_cb.Wdata<=xtn.Wdata_csr;
+			else
+				axi_vif.axi_drv_cb.Wdata<=xtn.Wdata[i];
+
+				axi_vif.axi_drv_cb.Wstrb<=xtn.Wstrb[i];
+				
+			if(i==(xtn.Wdata.size()-1))
+				axi_vif.axi_drv_cb.Wlast<=1'b1;
+			else
+				axi_vif.axi_drv_cb.Wlast<=1'b0;
+
+			@(axi_vif.axi_drv_cb);
+			wait(axi_vif.axi_drv_cb.Wready==1);
+
+			axi_vif.axi_drv_cb.Wvalid<=1'b0;
+			axi_vif.axi_drv_cb.Wlast<=1'b0;
+
+			repeat($urandom_range(1,5))
+			@(axi_vif.axi_drv_cb);
+      
+		end
+	`uvm_info(get_type_name(),$sformatf("printing from the write data \n %s",xtn.sprint()),UVM_NONE)
+
+endtask
+
+//driving logic for write response channel
+task write_response_channel(axi_xtn xtn);
+	forever
+		begin
+			axi_vif.axi_drv_cb.Bready<=1'b1;
+			@(axi_vif.axi_drv_cb);
+			wait(axi_vif.axi_drv_cb.Bvalid==1);
+			axi_vif.axi_drv_cb.Bready<=1'b0;
+			repeat($urandom_range(1,5))
+			@(axi_vif.axi_drv_cb);
+		end
+
+	`uvm_info(get_type_name(),$sformatf("printing from the write response \n %s",xtn.sprint()),UVM_NONE)
+
+endtask
+
+//task for read address channel
+task read_address_channel(axi_xtn xtn);
+	@(axi_vif.axi_drv_cb);
+	axi_vif.axi_drv_cb.Arvalid<=1'b1;
+	axi_vif.axi_drv_cb.Arid<=xtn.Arid;
+	axi_vif.axi_drv_cb.Arsize<=xtn.Arsize;
+	axi_vif.axi_drv_cb.Araddr<=xtn.Araddr;
+	axi_vif.axi_drv_cb.Arlen<=xtn.Arlen;
+	axi_vif.axi_drv_cb.Arburst<=xtn.Arburst;
+	axi_vif.axi_drv_cb.Arprot<=xtn.Arprot;
+
+	@(axi_vif.axi_drv_cb);
+	wait(axi_vif.axi_drv_cb.Arready==1);
+
+	axi_vif.axi_drv_cb.Arvalid<=1'b0;
+
+	repeat($urandom_range(1,5))
+	@(axi_vif.axi_drv_cb);
+
+	`uvm_info(get_type_name(),$sformatf("printing from the read address \n %s",xtn.sprint()),UVM_NONE)
+
+endtask
+
+//driving logic for read data channel
+task read_data_channel(axi_xtn xtn);
+	forever
+		begin
+			axi_vif.axi_drv_cb.Rready<=1'b1;
+			@(axi_vif.axi_drv_cb);
+			axi_vif.axi_drv_cb.Rready<=1'b0;
+			repeat($urandom_range(1,5))
+			@(axi_vif.axi_drv_cb);
+		end
+
+	`uvm_info(get_type_name(),$sformatf("printing from the read data \n %s",xtn.sprint()),UVM_NONE)
+
+endtask
+
+endclass

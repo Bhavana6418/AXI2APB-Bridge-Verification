@@ -1,0 +1,61 @@
+class environment extends uvm_env;
+ `uvm_component_utils(environment)
+
+//-----------------declare handles----------------//
+
+axi_agt_top axi_top;
+apb_agt_top apb_top;
+env_config e_cfg;
+
+//scoreboard sb;
+
+//---------------------constructor new method---------------------// 
+function new(string name="environment",uvm_component parent);
+ super.new(name,parent);
+endfunction
+
+//---------------------build phase method-----------------------//
+function void build_phase(uvm_phase phase);      
+    super.build_phase(phase);
+    if(!uvm_config_db #(env_config)::get(this,"","env_config",e_cfg))
+          `uvm_fatal("config_load","cannot_get_configuration env_config from uvm_config_db.Have u set it?");
+	
+    if(e_cfg.has_axi_agts)
+      begin
+        axi_top=axi_agt_top::type_id::create("axi_top",this);
+      end  
+
+    if(e_cfg.has_apb_agts)
+      begin
+        apb_top=apb_agt_top::type_id::create("apb_top",this);
+      end  		
+	
+    	        
+ /*   if(e_cfg.has_virtual_sequencer)
+     begin
+        v_sequencer=ram_virtual_sequencer::type_id::create("v_sequencer",this);
+     end
+endfunction
+
+    if(e_cfg.has_scoreboard)
+     begin
+        sb=scoreboard::type_id::create("sb",this);
+     end*/	   
+endfunction
+
+//---------------------connect phase method-----------------------//
+/*
+function void environment::connect_phase(uvm_phase phase);
+    super.connect_phase(phase);
+	if(e_cfg.has_scoreboard)
+		begin
+			axi_agt.s_agt[0].monh.ap.connect(sb.src_fifo[0].analysis_export);
+			apb_agt.d_agt[0].monh.m_ap.connect(sb.dst_fifo[0].analysis_export);
+			apb_agt.d_agt[1].monh.m_ap.connect(sb.dst_fifo[1].analysis_export);
+			apb_agt.d_agt[2].monh.m_ap.connect(sb.dst_fifo[2].analysis_export);
+
+		end
+
+  endfunction  */ 
+
+endclass

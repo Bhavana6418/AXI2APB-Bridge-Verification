@@ -1,0 +1,436 @@
+class base_test extends uvm_test;
+ `uvm_component_utils(base_test)
+
+//-------------declare handles----------//
+environment envh;
+env_config e_cfg;
+axi_config axi_cfg[];
+apb_config apb_cfg[];
+
+int no_of_axi_agts=1;
+int no_of_apb_agts=10;
+int has_axi_agts=1;
+int has_apb_agts=1;
+
+int no_of_transactions;
+
+bit [3:0] awlen=3;
+bit [3:0] arlen=3;
+//-------------------constructor new method--------------------//
+
+function new(string name="base_test",uvm_component parent);
+ super.new(name,parent);
+endfunction
+
+//-------------------function config--------------------//
+function void config_bridge();
+ if(has_axi_agts) 
+   begin
+     axi_cfg=new[no_of_axi_agts];
+     foreach(axi_cfg[i])
+      begin
+       axi_cfg[i]=axi_config::type_id::create($sformatf("axi_cfg[%0d]",i));
+       if(!uvm_config_db #(virtual axi_interface)::get(this,"",$sformatf("axi_if%0d",i),axi_cfg[i].axi_vif))
+         `uvm_fatal("VIF CONFIG","cannot get()interface vif from uvm_config_db.have u set() it?")
+          axi_cfg[i].is_active=UVM_ACTIVE;
+          e_cfg.axi_cfg[i]=axi_cfg[i];
+       end
+    end
+
+  if(has_apb_agts) 
+   begin
+     apb_cfg=new[no_of_apb_agts];
+     foreach(apb_cfg[i])
+      begin
+       apb_cfg[i]=apb_config::type_id::create($sformatf("apb_cfg[%0d]",i));
+       if(!uvm_config_db #(virtual apb_interface)::get(this,"",$sformatf("apb_if%0d",i),apb_cfg[i].vif))
+         `uvm_fatal("VIF CONFIG","cannot get()interface vif from uvm_config_db.have u set() it?")
+          apb_cfg[i].is_active=UVM_ACTIVE;
+          e_cfg.apb_cfg[i]=apb_cfg[i];
+       end
+    end
+     
+    e_cfg.has_axi_agts=has_axi_agts;
+    e_cfg.has_apb_agts=has_apb_agts;
+    e_cfg.no_of_axi_agts=no_of_axi_agts;
+    e_cfg.no_of_apb_agts=no_of_apb_agts;
+
+endfunction
+
+//--------------------function build phase-------------------//
+function void build_phase(uvm_phase phase);
+  e_cfg=env_config::type_id::create("e_cfg");
+
+  if(has_axi_agts)
+    e_cfg.axi_cfg=new[no_of_axi_agts];
+
+  if(has_apb_agts)
+    e_cfg.apb_cfg=new[no_of_apb_agts];
+
+  config_bridge();
+
+  uvm_config_db #(env_config)::set(this,"*","env_config",e_cfg);
+  super.build_phase(phase);
+
+  envh=environment::type_id::create("envh",this);
+endfunction
+
+function void end_of_elaboration_phase(uvm_phase phase);
+ super.end_of_elaboration_phase(phase);
+ uvm_top.print_topology;
+endfunction
+
+endclass
+
+//csr test
+class test1 extends base_test;
+
+`uvm_component_utils(test1)
+
+function new(string name="test1",uvm_component parent);
+ super.new(name,parent);
+endfunction
+
+axi_csr_sequence_000 seq_csr;
+
+axi_random_sequence seq1;
+apb_seq1 apb_seq1h[10];
+
+
+task run_phase(uvm_phase phase);
+
+	uvm_config_db# (bit [3:0])::set(this,"*","awlen",awlen);
+	//	`uvm_fatal(get_type_name(),"cannot getting awlen from test")
+
+	uvm_config_db# (bit [3:0])::set(this,"*","arlen",arlen);
+	//	`uvm_fatal(get_type_name(),"cannot getting arlen from test")
+
+
+seq_csr = axi_csr_sequence_000::type_id::create("seq_csr");
+
+seq1 = axi_random_sequence::type_id::create("seq1");
+foreach(apb_seq1h[i])
+apb_seq1h[i] = apb_seq1::type_id::create($sformatf("apb_seq1h[%d]",i));
+
+phase.raise_objection(this);
+
+seq_csr.start(envh.axi_top.axi_agt[0].seqrh);
+#300;
+
+fork
+	seq1.start(envh.axi_top.axi_agt[0].seqrh);
+	begin
+		#140;
+		fork
+		apb_seq1h[0].start(envh.apb_top.apb_agt[0].seqrh);
+		apb_seq1h[1].start(envh.apb_top.apb_agt[1].seqrh);
+		apb_seq1h[2].start(envh.apb_top.apb_agt[2].seqrh);
+		apb_seq1h[3].start(envh.apb_top.apb_agt[3].seqrh);
+		apb_seq1h[4].start(envh.apb_top.apb_agt[4].seqrh);
+		apb_seq1h[5].start(envh.apb_top.apb_agt[5].seqrh);
+		apb_seq1h[6].start(envh.apb_top.apb_agt[6].seqrh);
+		apb_seq1h[7].start(envh.apb_top.apb_agt[7].seqrh);
+		apb_seq1h[8].start(envh.apb_top.apb_agt[8].seqrh);
+		apb_seq1h[9].start(envh.apb_top.apb_agt[9].seqrh);
+
+		join
+	end
+join
+#1000;
+
+phase.drop_objection(this);
+
+endtask
+
+//endclass
+
+/*
+//-------------------axi_random_test---------------------//
+class axi_random_test extends base_test;
+ `uvm_component_utils(axi_random_test)
+  axi_random_sequence rand_seq;
+   
+  function new (string name="axi_random_test",uvm_component parent);
+    super.new(name,parent);
+  endfunction
+
+  function void build_phase(uvm_phase phase);
+    super.build_phase(phase);
+  endfunction
+
+  task run_phase(uvm_phase phase);
+   super.run_phase(phase);
+
+    rand_seq=axi_random_sequence::type_id::create("rand_seq");
+
+    phase.raise_objection(this);
+
+     rand_seq.start(envh.axi_top.axi_agt[0].seqrh);
+     #50;
+    
+    phase.drop_objection(this);
+   
+  endtask
+
+endclass
+
+//----------------decode error test------------------//
+class axi_decode_error_test extends base_test;
+ `uvm_component_utils(axi_decode_error_test)
+  axi_decode_error_sequence decode_seq;
+   
+  function new (string name="axi_decode_error_test",uvm_component parent);
+    super.new(name,parent);
+  endfunction
+
+  function void build_phase(uvm_phase phase);
+    super.build_phase(phase);
+  endfunction
+
+  task run_phase(uvm_phase phase);
+   super.run_phase(phase);
+
+    decode_seq=axi_decode_error_sequence::type_id::create("decode_seq");
+
+    phase.raise_objection(this);
+
+     decode_seq.start(envh.axi_top.axi_agt[0].seqrh);
+     #50;
+    
+    phase.drop_objection(this);
+   
+  endtask
+
+endclass
+
+//-----------------csr 000-------------------//
+class axi_csr_test_000 extends base_test;
+ `uvm_component_utils(axi_csr_test_000)
+  axi_csr_sequence_000 seq_000;
+   
+  function new (string name="axi_csr_test_000",uvm_component parent);
+    super.new(name,parent);
+  endfunction
+
+  function void build_phase(uvm_phase phase);
+    super.build_phase(phase);
+  endfunction
+
+  task run_phase(uvm_phase phase);
+   super.run_phase(phase);
+
+    seq_000=axi_csr_sequence_000::type_id::create("seq_000");
+
+    phase.raise_objection(this);
+
+     seq_000.start(envh.axi_top.axi_agt[0].seqrh);
+     #50;
+    
+    phase.drop_objection(this);
+   
+  endtask
+
+endclass
+
+//-----------------csr 001-------------------//
+class axi_csr_test_001 extends base_test;
+ `uvm_component_utils(axi_csr_test_001)
+  axi_csr_sequence_001 seq_001;
+   
+  function new (string name="axi_csr_test_001",uvm_component parent);
+    super.new(name,parent);
+  endfunction
+
+  function void build_phase(uvm_phase phase);
+    super.build_phase(phase);
+  endfunction
+
+  task run_phase(uvm_phase phase);
+   super.run_phase(phase);
+
+    seq_001=axi_csr_sequence_001::type_id::create("seq_001");
+
+    phase.raise_objection(this);
+
+     seq_001.start(envh.axi_top.axi_agt[0].seqrh);
+     #50;
+    
+    phase.drop_objection(this);
+   
+  endtask
+
+endclass
+
+//-----------------csr 010-------------------//
+class axi_csr_test_010 extends base_test;
+ `uvm_component_utils(axi_csr_test_010)
+  axi_csr_sequence_010 seq_010;
+   
+  function new (string name="axi_csr_test_010",uvm_component parent);
+    super.new(name,parent);
+  endfunction
+
+  function void build_phase(uvm_phase phase);
+    super.build_phase(phase);
+  endfunction
+
+  task run_phase(uvm_phase phase);
+   super.run_phase(phase);
+
+    seq_010=axi_csr_sequence_010::type_id::create("seq_010");
+
+    phase.raise_objection(this);
+
+     seq_010.start(envh.axi_top.axi_agt[0].seqrh);
+     #50;
+    
+    phase.drop_objection(this);
+   
+  endtask
+
+endclass
+
+//-----------------csr 011-------------------//
+class axi_csr_test_011 extends base_test;
+ `uvm_component_utils(axi_csr_test_011)
+  axi_csr_sequence_011 seq_011;
+   
+  function new (string name="axi_csr_test_011",uvm_component parent);
+    super.new(name,parent);
+  endfunction
+
+  function void build_phase(uvm_phase phase);
+    super.build_phase(phase);
+  endfunction
+
+  task run_phase(uvm_phase phase);
+   super.run_phase(phase);
+
+    seq_011=axi_csr_sequence_011::type_id::create("seq_011");
+
+    phase.raise_objection(this);
+
+     seq_011.start(envh.axi_top.axi_agt[0].seqrh);
+     #50;
+    
+    phase.drop_objection(this);
+   
+  endtask
+
+endclass
+
+//-----------------csr 100-------------------//
+class axi_csr_test_100 extends base_test;
+ `uvm_component_utils(axi_csr_test_100)
+  axi_csr_sequence_100 seq_100;
+   
+  function new (string name="axi_csr_test_100",uvm_component parent);
+    super.new(name,parent);
+  endfunction
+
+  function void build_phase(uvm_phase phase);
+    super.build_phase(phase);
+  endfunction
+
+  task run_phase(uvm_phase phase);
+   super.run_phase(phase);
+
+    seq_100=axi_csr_sequence_100::type_id::create("seq_100");
+
+    phase.raise_objection(this);
+
+     seq_100.start(envh.axi_top.axi_agt[0].seqrh);
+     #50;
+    
+    phase.drop_objection(this);
+   
+  endtask
+
+endclass
+
+//-----------------csr 101-------------------//
+class axi_csr_test_101 extends base_test;
+ `uvm_component_utils(axi_csr_test_101)
+  axi_csr_sequence_101 seq_101;
+   
+  function new (string name="axi_csr_test_101",uvm_component parent);
+    super.new(name,parent);
+  endfunction
+
+  function void build_phase(uvm_phase phase);
+    super.build_phase(phase);
+  endfunction
+
+  task run_phase(uvm_phase phase);
+   super.run_phase(phase);
+
+    seq_101=axi_csr_sequence_101::type_id::create("seq_101");
+
+    phase.raise_objection(this);
+
+     seq_101.start(envh.axi_top.axi_agt[0].seqrh);
+     #50;
+    
+    phase.drop_objection(this);
+   
+  endtask
+
+endclass
+
+//-----------------csr 110-------------------//
+class axi_csr_test_110 extends base_test;
+ `uvm_component_utils(axi_csr_test_110)
+  axi_csr_sequence_110 seq_110;
+   
+  function new (string name="axi_csr_test_110",uvm_component parent);
+    super.new(name,parent);
+  endfunction
+
+  function void build_phase(uvm_phase phase);
+    super.build_phase(phase);
+  endfunction
+
+  task run_phase(uvm_phase phase);
+   super.run_phase(phase);
+
+    seq_110=axi_csr_sequence_110::type_id::create("seq_110");
+
+    phase.raise_objection(this);
+
+     seq_110.start(envh.axi_top.axi_agt[0].seqrh);
+     #50;
+    
+    phase.drop_objection(this);
+   
+  endtask
+
+endclass
+
+//-----------------csr 111-------------------//
+class axi_csr_test_111 extends base_test;
+ `uvm_component_utils(axi_csr_test_111)
+  axi_csr_sequence_111 seq_111;
+   
+  function new (string name="axi_csr_test_111",uvm_component parent);
+    super.new(name,parent);
+  endfunction
+
+  function void build_phase(uvm_phase phase);
+    super.build_phase(phase);
+  endfunction
+
+  task run_phase(uvm_phase phase);
+   super.run_phase(phase);
+
+    seq_111=axi_csr_sequence_111::type_id::create("seq_111");
+
+    phase.raise_objection(this);
+
+     seq_111.start(envh.axi_top.axi_agt[0].seqrh);
+     #50;
+    
+    phase.drop_objection(this);
+   
+  endtask
+*/
+endclass
